@@ -47,6 +47,22 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		
 		MODULE.aCreateType = 'ICNS';
 		MODULE.aOptions_aBadge = '0';
+		
+		MODULE.ifBadgeNoneUncheck = function() {
+			if (MODULE.aOptions_aBadge == '0') {
+				MODULE.ui_saveScaledBaseDir = undefined;
+				MODULE.ui_saveScaledBadgeDir = undefined;
+			}
+		};
+		
+		MODULE.ifNoneScaleSaved_UncheckDontMake = function() {
+			if (!MODULE.ui_saveScaledBaseDir && !MODULE.ui_saveScaledBadgeDir && !MODULE.ui_saveScaledIconDir) {
+				MODULE.ui_dontMakeIconContainer = false;
+				MODULE.aOptions_dontMakeIconContainer = false;
+			} else {
+				MODULE.ui_dontMakeIconContainer = true;
+			}
+		};
 	}]);
 
 

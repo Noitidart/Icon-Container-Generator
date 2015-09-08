@@ -24,43 +24,54 @@
 			<select ng-model="BC.aCreateType" ng-options="aOptName for aOptName in ['ICNS', 'ICO', 'Linux Install']"/>
 		</label>
 		<br/>
-		Source Base Images:
-		<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px;">Drop Images Here</div>
+		<label>
+			Output Sizes:
+			<input type="text" size="4"/>
+		</label>
 		<br/>
 		<label>
 			Badge:
-			<select ng-model="BC.aOptions_aBadge" ng-options="key as aOptName for (key, aOptName) in {0:'NONE', 1:'Top Left', 2:'Top Right', 3:'Bottom Left', 4:'Bottom Right'}" />
-			
+			<select ng-model="BC.aOptions_aBadge" ng-options="key as aOptName for (key, aOptName) in {0:'NONE', 1:'Top Left', 2:'Top Right', 3:'Bottom Left', 4:'Bottom Right'}" ng-change="BC.ifBadgeNoneUncheck(); BC.ifNoneScaleSaved_UncheckDontMake();"/>
 		</label>
 		<br/>
 		<span ng-show="BC.aOptions_aBadge != '0'">
-			Source Badge Images:
-			<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px;">Drop Images Here</div>
+			<label>
+				<input type="checkbox" ng-model="BC.ui_saveScaledBaseDir" ng-change="BC.aOptions_saveScaledBaseDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
+				Saved scaled base images
+			</label>
+			<input type="text" ng-model="BC.aOptions_saveScaledBaseDir" ng-show="BC.ui_saveScaledBaseDir"/>
 			<br/>
 			<label>
-				<input type="checkbox" ng-model="BC.ui_saveScaledBadgeDir" ng-change="BC.aOptions_saveScaledBadgeDir=''"/>
+				<input type="checkbox" ng-model="BC.ui_saveScaledBadgeDir" ng-change="BC.aOptions_saveScaledBadgeDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
 				Saved scaled badge images
 			</label>
 			<input type="text" ng-model="BC.aOptions_saveScaledBadgeDir" ng-show="BC.ui_saveScaledBadgeDir"/>
 			<br/>
 		</span>
 		<label>
-			<input type="checkbox" ng-model="BC.ui_saveScaledBaseDir" ng-change="BC.aOptions_saveScaledBaseDir=''"/>
-			Saved scaled base images
-		</label>
-		<input type="text" ng-model="BC.aOptions_saveScaledBaseDir" ng-show="BC.ui_saveScaledBaseDir"/>
-		<br/>
-		<label>
-			<input type="checkbox" ng-model="BC.ui_saveScaledIconDir" ng-change="BC.aOptions_saveScaledIconDir=''"/>
+			<input type="checkbox" ng-model="BC.ui_saveScaledIconDir" ng-change="BC.aOptions_saveScaledIconDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
 			Saved scaled icon images
 		</label>
 		<input type="text" ng-model="BC.aOptions_saveScaledIconDir" ng-show="BC.ui_saveScaledIconDir"/>
 		<br/>
-		<span ng-show="BC.ui_saveScaledBaseDir || BC.ui_saveScaledIconDir || BC.ui_saveScaledBadgeDir">
+		<span ng-show="BC.ui_dontMakeIconContainer">
 			<label>
 				<input type="checkbox" ng-model="BC.aOptions_dontMakeIconContainer"/>
-				Don't output container (only useful if you are just intending to save the scaled images)
+				Don't output container (only useful if you are just want to save the scaled images)
 			</label>
+		</span>
+		<br/>
+		<br/>
+		Source {{BC.aOptions_aBadge != '0' ? 'Base ' : ''}}Images:
+		<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">Drop Images Here</div>
+		<br/>
+		Output Images:
+		<div style="display:inline-block; width: 400px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">preview of images that will be put into the container file</div>
+		<br/>
+		<span ng-show="BC.aOptions_aBadge != '0'">
+			Source Badge Images:
+			<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">Drop Images Here</div>
+			<br/>
 		</span>
 	</body>
 </html>
