@@ -101,14 +101,12 @@ function extendCore() {
 }
 
 // START - Addon Functionalities
-Services.prompt.alert(null, 'asfd', core.addon.path.locale + 'bootstrap.properties?' + core.addon.cache_key);
-// Services.prompt.alert(null, 'asfd', myServices.sb.GetStringFromName('addon_desc'));
 
 // start - about module
 var aboutFactory_iconcontainergenerator;
 function AboutIconContainerGenerator() {}
 AboutIconContainerGenerator.prototype = Object.freeze({
-	classDescription: myServices.sb.GetStringFromName('about-page_desc'),
+	classDescription: 'Icon Container Generator Application', //myServices.sb.GetStringFromName('about-page_desc'),
 	contractID: '@mozilla.org/network/protocol/about;1?what=icon-container-generator',
 	classID: Components.ID('{65cc2b40-55bc-11e5-a837-0800200c9a66}'),
 	QueryInterface: XPCOMUtils.generateQI([Ci.nsIAboutModule]),
@@ -190,7 +188,7 @@ function startup(aData, aReason) {
 	);
 	
 	// register about page
-	// aboutFactory_iconcontainergenerator = new AboutFactory(AboutIconContainerGenerator);
+	aboutFactory_iconcontainergenerator = new AboutFactory(AboutIconContainerGenerator);
 	
 }
 
@@ -205,7 +203,7 @@ function shutdown(aData, aReason) {
 	
 	console.error('should have terminated');
 	// an issue with this unload is that framescripts are left over, i want to destory them eventually
-	// aboutFactory_iconcontainergenerator.unregister();
+	aboutFactory_iconcontainergenerator.unregister();
 }
 
 // start - common helper functions
