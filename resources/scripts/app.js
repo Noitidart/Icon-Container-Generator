@@ -23,7 +23,7 @@ const clientId = new Date().getTime();
 
 // Lazy Imports
 const myServices = {};
-XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'app.properties?' + core.addon.cache_key) });
+XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'app.properties?' + core.addon.cache_key) }); // Randomize URI to work around bug 719376
 
 alert('will now alert');
 alert(myServices.sb.GetStringFromName('addon_desc'));
