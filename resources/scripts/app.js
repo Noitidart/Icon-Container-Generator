@@ -25,10 +25,10 @@ const clientId = new Date().getTime();
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'app.properties?' + core.addon.cache_key) });
 
+alert('will now alert');
+alert(myServices.sb.GetStringFromName('addon_desc'));
+
 function onPageReady() {
-	var gAngBody = angular.element(document.body);
-	gAngScope = gAngBody.scope();
-	// gAngInjector = gAngBody.injector();
 	
 	// message bootstrap, tell him im open, and that he should startup ICGenWorker if its not yet ready
 }
@@ -39,9 +39,11 @@ function onPageUnload() {
 
 var	ANG_APP = angular.module('iconcontainergenerator', [])
 	.controller('BodyController', ['$scope', function($scope) {
-				
+		var gAngBody = angular.element(document.body);
+		gAngScope = gAngBody.scope();
+		// gAngInjector = gAngBody.injector();
 	}]);
 
 
-document.addEventListener('DOMContentLoaded', onAppLoad, false);
+document.addEventListener('DOMContentLoaded', onPageReady, false);
 document.addEventListener('unload', onPageUnload, false);

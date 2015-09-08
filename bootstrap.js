@@ -45,7 +45,7 @@ var bootstrap = this; // needed for SIPWorker and SICWorker
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'hph', function () { return Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler); });
-XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + core.addon.cache_key); /* Randomize URI to work around bug 719376 */ });
+XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'bootstrap.properties?' + core.addon.cache_key) });
 
 function extendCore() {
 	// adds some properties i use to core based on the current operating system, it needs a switch, thats why i couldnt put it into the core obj at top
@@ -102,7 +102,24 @@ function extendCore() {
 
 // START - Addon Functionalities
 Services.prompt.alert(null, 'asfd', core.addon.path.locale + 'bootstrap.properties?' + core.addon.cache_key);
-Services.prompt.alert(null, 'asfd', myServices.sb.GetStringFromName('addon_name'));
+// Services.prompt.alert(null, 'asfd', myServices.sb.GetStringFromName('addon_desc'));
+
+var props = myServices.sb.getSimpleEnumeration();
+// MDN says getSimpleEnumeration returns nsIPropertyElement // https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIStringBundle#getSimpleEnumeration%28%29
+
+while (props.hasMoreElements()) {
+  var prop = props.getNext();
+  // doing console.log(prop) says its an XPCWrappedObject but we see QueryInterface (QI), so let's try QI'ing to nsiPropertyElement
+
+  var propEl = prop.QueryInterface(Ci.nsIPropertyElement);
+  // doing console.log(propEl) shows the object has some fields that interest us
+
+  var key = propEl.key;
+  var str = propEl.value;
+
+  console.info(key, str); // there you go
+}
+
 // start - about module
 var aboutFactory_iconcontainergenerator;
 function AboutIconContainerGenerator() {}

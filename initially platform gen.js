@@ -1,11 +1,12 @@
 // all functions use this format for 
+// note for profilist, ill know the paths, so no need to select dir and use os.file to get contents for aBadgeSrcImgPathArr and aBaseSrcImgPathArr, i save them to a preset folder
 
 function returnIconset(aCreateType, aCreateName, aCreatePathDirArr) {
 	// aCreateType - string. future plan to support things like tiff. in future maybe make this an arr, so can make multiple types in one shot.
 		// ico - can be done on any os
 		// linux - installation part is linux dependent
 		// icns - requires mac, as i use iconutils
-	// aCreateName - same across all os, name to create iconset with
+	// aCreateName - same across all os, name to create icon container with
 	// aCreatePathDirArr
 		// win and mac - os paths to directories you want icon written to, it will writeAtomic to each of these dirs
 		// linux - array of theme names, if null, it will default to ['hicolor']
@@ -26,7 +27,17 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDirArr) {
 		// same across all os - os paths of images to be used as sources for badges, the sizes will be auto determined, if any of them are not square it will throw
 	// aOptions.aBageSizePerIconSize
 		// same across all os - if 
-	
+	// aOptions.saveScaledBadgeDir
+		// same across all os - set to a os path if you want the scaled badges to be saved, will be pngs
+	// aOptions.saveScaledBaseDir
+		// same across all os - set to a os path if you want the scaled bases to be saved, will be pngs
+	// aOptions.saveScaledIconDir
+		// same across all os - set to a os path if you want the final before making ico or icns to be saved, if saveScaledBadgeDir is not set, then this is same as saveScaledBaseDir
+	// aOptions.dontMakeIconContainer - bool
+		// linux - wont install to shared dirs
+		// ico - wont make ico
+		// mac - wont make icns
+		// this is if just want to saved the Scaled images to a dir and dont want to make the icon right away
 	
 	// return value
 		// on linux it installs the pngs to the appropriate folders, returns a string name to use
