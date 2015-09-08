@@ -12,6 +12,55 @@
 		<script src="chrome://icon-container-generator/content/resources/scripts/app.js"></script>
 	</head>
 	<body ng-controller="BodyController as BC">
-		hi
+		<h1>Icon Container Generator</h1>
+		<h2>Parameters</h2>
+		<label>
+			Ouput Name:
+			<input ng-model="BC.aCreateName" />
+		</label>
+		<br/>
+		<label>
+			Output Type:
+			<select ng-model="BC.aCreateType" ng-options="aOptName for aOptName in ['ICNS', 'ICO', 'Linux Install']"/>
+		</label>
+		<br/>
+		Source Base Images:
+		<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px;">Drop Images Here</div>
+		<br/>
+		<label>
+			Badge:
+			<select ng-model="BC.aOptions_aBadge" ng-options="key as aOptName for (key, aOptName) in {0:'NONE', 1:'Top Left', 2:'Top Right', 3:'Bottom Left', 4:'Bottom Right'}" />
+			
+		</label>
+		<br/>
+		<span ng-show="BC.aOptions_aBadge != '0'">
+			Source Badge Images:
+			<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px;">Drop Images Here</div>
+			<br/>
+			<label>
+				<input type="checkbox" ng-model="BC.ui_saveScaledBadgeDir" ng-change="BC.aOptions_saveScaledBadgeDir=''"/>
+				Saved scaled badge images
+			</label>
+			<input type="text" ng-model="BC.aOptions_saveScaledBadgeDir" ng-show="BC.ui_saveScaledBadgeDir"/>
+			<br/>
+		</span>
+		<label>
+			<input type="checkbox" ng-model="BC.ui_saveScaledBaseDir" ng-change="BC.aOptions_saveScaledBaseDir=''"/>
+			Saved scaled base images
+		</label>
+		<input type="text" ng-model="BC.aOptions_saveScaledBaseDir" ng-show="BC.ui_saveScaledBaseDir"/>
+		<br/>
+		<label>
+			<input type="checkbox" ng-model="BC.ui_saveScaledIconDir" ng-change="BC.aOptions_saveScaledIconDir=''"/>
+			Saved scaled icon images
+		</label>
+		<input type="text" ng-model="BC.aOptions_saveScaledIconDir" ng-show="BC.ui_saveScaledIconDir"/>
+		<br/>
+		<span ng-show="BC.ui_saveScaledBaseDir || BC.ui_saveScaledIconDir || BC.ui_saveScaledBadgeDir">
+			<label>
+				<input type="checkbox" ng-model="BC.aOptions_dontMakeIconContainer"/>
+				Don't output container (only useful if you are just intending to save the scaled images)
+			</label>
+		</span>
 	</body>
 </html>

@@ -25,8 +25,7 @@ const clientId = new Date().getTime();
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'app.properties?' + core.addon.cache_key) }); // Randomize URI to work around bug 719376
 
-alert('will now alert');
-alert(myServices.sb.GetStringFromName('addon_desc'));
+// alert(myServices.sb.GetStringFromName('addon_desc'));
 
 function onPageReady() {
 	
@@ -39,9 +38,15 @@ function onPageUnload() {
 
 var	ANG_APP = angular.module('iconcontainergenerator', [])
 	.controller('BodyController', ['$scope', function($scope) {
+		
+		var MODULE = this;
+		
 		var gAngBody = angular.element(document.body);
 		gAngScope = gAngBody.scope();
 		// gAngInjector = gAngBody.injector();
+		
+		MODULE.aCreateType = 'ICNS';
+		MODULE.aOptions_aBadge = '0';
 	}]);
 
 
