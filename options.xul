@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<!DOCTYPE mydialog SYSTEM "chrome://icon-container-generator/locale/options_inline.dtd">
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	<setting title="&icon-container-generator.options-inline.app-launch-title;" type="control" desc="&icon-container-generator.options-inline.app-launch-desc;">
+		<button label="&icon-container-generator.options-inline.app-launch-btn;" oncommand="window.location='about:icon-container-generator'" />
+	</setting>
+</vbox>

@@ -1,0 +1,3 @@
+<!ENTITY icon-container-generator.options-inline.app-launch-title 'Icon Container Generator Application'>
+<!ENTITY icon-container-generator.options-inline.app-launch-desc 'An HTML5 application that generates icon containers, such as ICO for Windows, ICNS for Mac OS X, and share folder installation for Linux.'>
+<!ENTITY icon-container-generator.options-inline.app-launch-btn 'Launch Application'>

@@ -1,0 +1,5 @@
+<!ENTITY icon-container-generator.addon-name 'Icon Container Generator'>
+<!ENTITY icon-container-generator.addon-description 'An HTML5 application that generates icon containers, such as ICO for Windows, ICNS for Mac OS X, and share folder installation for Linux.'>
+
+<!ENTITY icon-container-generator.app.title 'Icon Container Generator'>
+<!ENTITY icon-container-generator.app.desc 'Supply an image collection and create an icon conatiner'>
