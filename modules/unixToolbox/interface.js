@@ -30,7 +30,11 @@ function unixToolboxInit(exports){
     this.worker.onmessage = function(ev) {
       var obj;
       try{
-        obj = JSON.parse(ev.data);
+		if (typeof ev.data == 'string') {
+			obj = JSON.parse(ev.data);
+		} else {
+			obj = ev.data;
+		}
       }
       catch(e) {
         return;
@@ -183,25 +187,6 @@ function unixToolboxInit(exports){
         pseudo_path: file.path,
         pseudo_name: file.filename
       }));
-
-      var prom2 = new Promise();
-      var chunks = [];
-      prom1.then(function(msg) {
-        var id = msg.chunk_id;
-        chunks[id] = msg.contents;
-
-        var complete = true;
-        for(var i = 0; i < msg.chunk_count; i++) {
-          if(typeof(chunks[i]) === 'undefined') {
-            complete = false;
-            break;
-          }
-        }
-
-        if(complete) {
-          prom2.fulfil(chunks.join(''), file.path, file.filename);
-        }
-      });
 
       return prom1;
     },

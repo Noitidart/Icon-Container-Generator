@@ -41,10 +41,9 @@ convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/delegates.x
 convert.addUrl(OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64.png')), '/');
 
   convert.allDone().then(function() {
-    convert.run('-rotate', '90', '/Image-Box-64.png', '/Image-Box-64-rot90.jpeg').then(function() {
-      convert.getFileArrBuf('Image-Box-64-rot90.jpeg').then(function(real_contents) {
-		  console.log('real_contents:', real_contents);
-		  OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot.jpeg'), real_contents.binary_data, { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt.tmp') });
+    convert.run('-rotate', '90', '/Image-Box-64.png', '/Image-Box-64-rot90.png').then(function() {
+      convert.getFileArrBuf('Image-Box-64-rot90.png').then(function(real_contents) {
+		  OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-TAT.png'), new Uint8Array(real_contents.buf), { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt.tmp') });
       });
     });
   });
