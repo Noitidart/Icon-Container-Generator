@@ -65,7 +65,7 @@
 						<input type="text" size="3" ng-model="BC.aBadgeSizePerOutputSize[aOutputSize]" />
 					</td>
 					<td ng-show="BC.ifThereAreAnyFactors()">
-						{{BC.isAFactor(aBadgeSizeOrFactor) ? ((aOutputSize * aBadgeSizeOrFactor) | number:0) : '-'}}
+						{{BC.isAFactor(aBadgeSizeOrFactor) ? BC.calcFactoredRounded(aBadgeSizeOrFactor, aOutputSize) : '-'}}
 					</td>
 				</tr>
 			</table>

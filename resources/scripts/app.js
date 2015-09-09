@@ -207,6 +207,10 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			}
 		};
 		
+		MODULE.calcFactoredRounded = function(aFactor, aOf) {
+			return Math.round(parseFloat(aOf) * parseFloat(aFactor));
+		};
+		
 		MODULE.onChangeOutputSizes = function() {
 			MODULE.aOutputSizesArr = [];
 			MODULE.aOutputSizesCustomStr = '';
@@ -320,7 +324,7 @@ function generatePreviews() {
 				// because its null, undefined, or 0, so they dont want a badge on this icon size
 				continue;
 			} else if (targetBadgeSizeScaleOrFactor < 1) {
-				var targetBadgeSize = targetBadgeSizeScaleOrFactor * targetIconOutputSize;
+				var targetBadgeSize = Math.round(targetBadgeSizeScaleOrFactor * targetIconOutputSize);
 			} else {
 				var targetBadgeSize = targetBadgeSizeScaleOrFactor;
 			}
