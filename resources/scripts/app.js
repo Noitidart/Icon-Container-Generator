@@ -86,7 +86,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.aCreateType = 'ICNS';
 		MODULE.aOptions_aBadge = '0';
 		
-		MODULE.aCreatePathDirArr = [];
+		MODULE.aCreatePathDir = '';
 		
 		MODULE.aOutputSizesType = 'Custom';
 		MODULE.aOutputSizesArr = [];
@@ -126,6 +126,8 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			if (MODULE.aOptions_aBadge == '0') {
 				MODULE.ui_saveScaledBaseDir = undefined;
 				MODULE.ui_saveScaledBadgeDir = undefined;
+				MODULE.aOptions_saveScaledBaseDir = undefined;
+				MODULE.aOptions_saveScaledBadgeDir = undefined;
 			}
 		};
 		
@@ -142,19 +144,15 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			// send message to bootstrap with image paths
 		};
 		
-		MODULE.BrowseAndAddDir = function() {
+		MODULE.BrowseSelectDir = function(aArgName) {
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
 			fp.init(Services.wm.getMostRecentWindow('navigator:browser'), 'Pick directory the icon container file should be saved in', Ci.nsIFilePicker.modeGetFolder);
-			fp.appendFilters(Ci.nsIFilePicker.filterAll);
+			// fp.appendFilters(Ci.nsIFilePicker.filterAll);
 
 			var rv = fp.show();
 			if (rv == Ci.nsIFilePicker.returnOK) {
 				
-				if (MODULE.aCreatePathDirArr.indexOf(fp.file.path) > -1) {
-					alert('Error: This directory path is already in the list of directories to output to, it will not be added.');
-				} else {
-					MODULE.aCreatePathDirArr.push(fp.file.path);
-				}
+				MODULE[aArgName] = fp.file.path;
 
 			}// else { // cancelled	}
 		};

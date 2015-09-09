@@ -24,10 +24,8 @@
 			<input ng-model="BC.aCreateName" type="text"/>
 		</label>
 		<br/>
-		Ouput Directory: <input type="button" value="Browse and Add Directory" ng-click="BC.BrowseAndAddDir()"/>
-		<br/>
-		<select ng-model="BC.aCreatePathDirArr_selected" multiple="true" ng-options="aOptName for aOptName in BC.aCreatePathDirArr" />
-		<input type="button" value="Remove Selected Directory" ng-click="BC.RemoveSelectedDirs()" ng-show="BC.aCreatePathDirArr_selected"/>
+		Ouput Directory: <input type="button" value="{{BC.aCreatePathDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aCreatePathDir')"/>
+		<i>{{BC.aCreatePathDir}}</i>
 		<br/>
 		<label>
 			Output Sizes:
@@ -45,20 +43,23 @@
 				<input type="checkbox" ng-model="BC.ui_saveScaledBaseDir" ng-change="BC.aOptions_saveScaledBaseDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
 				Saved scaled base images
 			</label>
-			<input type="text" ng-model="BC.aOptions_saveScaledBaseDir" ng-show="BC.ui_saveScaledBaseDir"/>
+			<input type="button" value="{{BC.aOptions_saveScaledBaseDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledBaseDir')" ng-show="BC.ui_saveScaledBaseDir"/>
+			<i>{{BC.aOptions_saveScaledBaseDir}}</i>
 			<br/>
 			<label>
 				<input type="checkbox" ng-model="BC.ui_saveScaledBadgeDir" ng-change="BC.aOptions_saveScaledBadgeDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
 				Saved scaled badge images
 			</label>
-			<input type="text" ng-model="BC.aOptions_saveScaledBadgeDir" ng-show="BC.ui_saveScaledBadgeDir"/>
+			<input type="button" value="{{BC.aOptions_saveScaledBadgeDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledBadgeDir')" ng-show="BC.ui_saveScaledBadgeDir"/>
+			<i>{{BC.aOptions_saveScaledBadgeDir}}</i>
 			<br/>
 		</span>
 		<label>
 			<input type="checkbox" ng-model="BC.ui_saveScaledIconDir" ng-change="BC.aOptions_saveScaledIconDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
 			Saved scaled icon images
 		</label>
-		<input type="text" ng-model="BC.aOptions_saveScaledIconDir" ng-show="BC.ui_saveScaledIconDir"/>
+		<input type="button" value="{{BC.aOptions_saveScaledIconDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledIconDir')" ng-show="BC.ui_saveScaledIconDir"/>
+		<i>{{BC.aOptions_saveScaledIconDir}}</i>
 		<br/>
 		<span ng-show="BC.ui_dontMakeIconContainer">
 			<label>
