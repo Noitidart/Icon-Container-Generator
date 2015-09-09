@@ -79,6 +79,18 @@
 				</span>
 		</div>
 		<br/>
+		<span ng-show="BC.aOptions_aBadge != '0'">
+			Source Badge Images:
+			<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_badge">
+					<span ng-show="!BC.aBadgeSrcImgPathArr || BC.aBadgeSrcImgPathArr.length == 0">
+						Drop Images Here
+					</span>
+					<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizes[aSrc]}}" ng-repeat="aSrc in BC.aBadgeSrcImgPathArr">
+						<img src="{{aSrc}}" />
+					</span>
+			</div>
+			<br/>
+		</span>
 		Output Images:
 		<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">
 			<span ng-show="!BC.aOutputSizesArr || BC.aOutputSizesArr.length == 0">
@@ -88,19 +100,6 @@
 				<canvas ng-init="BC.previewInserted(aSize, $index)" ng-repeat="aSize in BC.aOutputSizesArr" class="outputImg_blank"/>
 			</span>
 		</div>
-		<br/>
-		<span ng-show="BC.aOptions_aBadge != '0'">
-			Source Badge Images:
-			<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_badge">
-					<span ng-show="!BC.aBadgeSrcImgPathArr || BC.aBadgeSrcImgPathArr.length == 0">
-						Drop Images Here
-					</span>
-					<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizes[aSrc]}}" ng-repeat="aSrc in BC.aBadgeSrcImgPathArr">
-						<img class="aSrcImg" src="{{aSrc}}" />
-					</span>
-			</div>
-			<br/>
-		</span>
 		<br/>
 		<input type="button" value="Make Icon Container" style="width:100%;" ng-click="doMake()"/>
 	</body>

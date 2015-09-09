@@ -3,6 +3,10 @@ body {
 	cursor: default;
 }
 
+h1 {
+	/*background: transparent url("chrome://icon-container-generator/content/icon.png") no-repeat scroll right center;*/
+}
+
 input[type=text] {
 	cursor: text;
 }

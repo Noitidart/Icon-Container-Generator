@@ -218,11 +218,11 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		
 		MODULE.previewInserted = function(aSize, aIndex) {
 			var can = document.getElementById('previews').querySelectorAll('canvas')[aIndex];
-			console.info('can:', can)
+			console.info('can:', can);
 			var ctx = can.getContext('2d');
 			can.width = aSize;
 			can.height = aSize;
-			fitTextOnCanvas(can, ctx, aSize, 'arial')
+			fitTextOnCanvas(can, ctx, aSize, 'arial');
 		};
 	}]);
 
@@ -242,8 +242,9 @@ function fitTextOnCanvas(aCan, aCtx, text, fontface) {
     } while (textMeasure.width > aCan.width)
 
     // draw the text
-	aCtx.textBaseline = 'middle';
-    aCtx.fillText(text, (aCan.width / 2) - (textMeasure.width / 2), (aCan.height / 2));
+	aCtx.textBaseline = 'top';
+	var heightGuess = aCtx.measureText('W').width; // this is a guess because measureText does not support height as of sep 8 2015
+    aCtx.fillText(text, (aCan.width / 2) - (textMeasure.width / 2), (aCan.height / 2) - (heightGuess/2));
 	
     // alert('A fontsize of ' + fontsize + 'px fits this text on the canvas');
 
