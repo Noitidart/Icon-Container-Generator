@@ -171,7 +171,40 @@ function unixToolboxInit(exports){
 
       return prom2;
     },
+	
+    self.getFileArrBuf = function(pseudo_file) {
+      var file = self._analysePath(pseudo_file);
 
+      var prom1 = new Promise();
+      self.promises.push(prom1);
+      self.worker.postMessage(JSON.stringify({
+        cmd:         'getFileArrBuf',
+        id:          (self.promises.length-1),
+        pseudo_path: file.path,
+        pseudo_name: file.filename
+      }));
+
+      var prom2 = new Promise();
+      var chunks = [];
+      prom1.then(function(msg) {
+        var id = msg.chunk_id;
+        chunks[id] = msg.contents;
+
+        var complete = true;
+        for(var i = 0; i < msg.chunk_count; i++) {
+          if(typeof(chunks[i]) === 'undefined') {
+            complete = false;
+            break;
+          }
+        }
+
+        if(complete) {
+          prom2.fulfil(chunks.join(''), file.path, file.filename);
+        }
+      });
+
+      return prom1;
+    },
 
     this.addData = function(contents, pseudo_path) {
       var dst = self._analysePath(pseudo_path);

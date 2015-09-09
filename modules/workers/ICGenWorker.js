@@ -42,8 +42,9 @@ convert.addUrl(OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'Ima
 
   convert.allDone().then(function() {
     convert.run('-rotate', '90', '/Image-Box-64.png', '/Image-Box-64-rot90.jpeg').then(function() {
-      convert.getFile('Image-Box-64-rot90.jpeg').then(function(real_contents) {
-		  OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot.jpeg'), new Uint8Array(real_contents), { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt.tmp') });
+      convert.getFileArrBuf('Image-Box-64-rot90.jpeg').then(function(real_contents) {
+		  console.log('real_contents:', real_contents);
+		  OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot.jpeg'), real_contents.binary_data, { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt.tmp') });
       });
     });
   });
