@@ -265,6 +265,17 @@ function generatePreviews() {
 		}
 		ctx.drawImage.apply(ctx, baseDrawImageArgs);
 
+		if (gAngScope.BC.imgPathSizesBase[whichNameForBase] == can.width) {
+			can.parentNode.setAttribute('data-base-scale-word', '=)');
+			can.parentNode.removeAttribute('data-base-scale-from');
+		} else if (gAngScope.BC.imgPathSizesBase[whichNameForBase] < can.width) {
+			can.parentNode.setAttribute('data-base-scale-word', 'up');
+			can.parentNode.setAttribute('data-base-scale-from', gAngScope.BC.imgPathSizesBase[whichNameForBase]);
+		} else { // if (gAngScope.BC.imgPathSizesBase[whichNameForBase] > can.width) {
+			can.parentNode.setAttribute('data-base-scale-word', 'dn');
+			can.parentNode.setAttribute('data-base-scale-from', gAngScope.BC.imgPathSizesBase[whichNameForBase]);
+		}
+		
 		// draw badge if they wanted one
 		if (parseInt(gAngScope.BC.aOptions_aBadge) > 0) {
 			var targetBadgeSize = can.width / 3; // for now assuming 1/3rd for badge size
@@ -323,6 +334,18 @@ function generatePreviews() {
 				badgeDrawImageArgs.push(targetBadgeSize); // scale to height
 			}
 			ctx.drawImage.apply(ctx, badgeDrawImageArgs);
+			
+			if (gAngScope.BC.imgPathSizesBadge[whichNameForBadge] == targetBadgeSize) {
+				can.parentNode.setAttribute('data-badge-scale-word', 'perfect');
+				can.parentNode.removeAttribute('data-badge-scale-from');
+			} else if (gAngScope.BC.imgPathSizesBadge[whichNameForBadge] < targetBadgeSize) {
+				can.parentNode.setAttribute('data-badge-scale-word', 'up');
+				can.parentNode.setAttribute('data-badge-scale-from', gAngScope.BC.imgPathSizesBadge[whichNameForBadge]);
+			} else { // if (gAngScope.BC.imgPathSizesBadge[whichNameForBadge] > targetBadgeSize) {
+				can.parentNode.setAttribute('data-badge-scale-word', 'dn');
+				can.parentNode.setAttribute('data-badge-scale-from', gAngScope.BC.imgPathSizesBadge[whichNameForBadge]);
+			}
+			
 		}
 	}
 }

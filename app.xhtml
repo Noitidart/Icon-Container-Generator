@@ -79,7 +79,7 @@
 				<span ng-show="!BC.aBaseSrcImgPathArr || BC.aBaseSrcImgPathArr.length == 0">
 					Drop Images Here
 				</span>
-				<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizes[aSrc]}}" ng-repeat="aSrc in BC.aBaseSrcImgPathArr">
+				<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizesBase[aSrc]}}" ng-repeat="aSrc in BC.aBaseSrcImgPathArr">
 					<img class="aSrcImg" src="{{aSrc}}" />
 				</span>
 		</div>
@@ -90,7 +90,7 @@
 					<span ng-show="!BC.aBadgeSrcImgPathArr || BC.aBadgeSrcImgPathArr.length == 0">
 						Drop Images Here
 					</span>
-					<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizes[aSrc]}}" ng-repeat="aSrc in BC.aBadgeSrcImgPathArr">
+					<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizesBadge[aSrc]}}" ng-repeat="aSrc in BC.aBadgeSrcImgPathArr">
 						<img src="{{aSrc}}" />
 					</span>
 			</div>
@@ -102,7 +102,9 @@
 				preview of images that will be put into the container file
 			</span>
 			<span ng-show="BC.aOutputSizesArr" id="previews">
-				<canvas ng-init="BC.previewInserted(aSize, $index)" ng-repeat="aSize in BC.aOutputSizesArr" class="outputImg_blank"/>
+				<span class="outputPreviewCanCont" ng-init="BC.previewInserted(aSize, $index)" ng-repeat="aSize in BC.aOutputSizesArr">
+					<canvas class="outputImg_blank"/>
+				</span>
 			</span>
 		</div>
 		<br/>

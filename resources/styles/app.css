@@ -20,8 +20,50 @@ select[multiple] {
 	border: 2px dashed steelblue;
 	border-radius: 3px;
 	background-color: #d7d7d7;
+}
+
+.outputPreviewCanCont {
+	display: inline-block;
 	margin: 10px;
+	padding: 0;
 	vertical-align: top;
+	position: relative;
+	line-height: 1em;
+}
+
+.outputPreviewCanCont::after {
+	content: attr(data-base-scale-word) attr(data-base-scale-from);
+	bottom:-1em;
+}
+
+.outputPreviewCanCont::before {
+	content: attr(data-badge-scale-word) attr(data-badge-scale-from);
+	bottom:-2em;
+}
+
+.outputPreviewCanCont::before,
+.outputPreviewCanCont::after {
+	color: #000;
+	left:0;
+	text-align: center;
+	position: absolute;
+	width: 100%;
+	font-weight: bold;
+}
+
+.outputPreviewCanCont[data-badge-scale-word="dn"]::before,
+.outputPreviewCanCont[data-base-scale-word="dn"]::after {
+	color: red;
+}
+
+.outputPreviewCanCont[data-badge-scale-word="up"]::before,
+.outputPreviewCanCont[data-base-scale-word="up"]::after {
+	color: orange;
+}
+
+.outputPreviewCanCont[data-badge-scale-word="=)"]::before,
+.outputPreviewCanCont[data-base-scale-word="=)"]::after {
+	color: green;
 }
 
 .aSrcImgSpan {
@@ -42,3 +84,4 @@ select[multiple] {
 	width: 100%;
 	font-weight: bold;
 }
+
