@@ -44,6 +44,31 @@
 		</label>
 		<br/>
 		<span ng-show="BC.aOptions_aBadge != '0'">
+			Badge Size/Scale per Icon Size: (enter value less than 1 for scale factor, ex: 0.5 or 0.333)
+			<table>
+				<tr>
+					<th>
+						icon size
+					</th>
+					<th>
+						badge size/factor
+					</th>
+					<th ng-show="BC.ifThereAreAnyFactors()">
+						factored size
+					</th>
+				</tr>
+				<tr ng-repeat="(aOutputSize, aBadgeSizeOrFactor) in BC.aBadgeSizePerOutputSize">
+					<td>
+						{{aOutputSize}}
+					</td>
+					<td>
+						<input type="text" size="3" ng-model="BC.aBadgeSizePerOutputSize[aOutputSize]" />
+					</td>
+					<td ng-show="BC.ifThereAreAnyFactors()">
+						{{BC.isAFactor(aBadgeSizeOrFactor) ? ((aOutputSize * aBadgeSizeOrFactor) | number:0) : '-'}}
+					</td>
+				</tr>
+			</table>
 			<label>
 				<input type="checkbox" ng-model="BC.ui_saveScaledBaseDir" ng-change="BC.aOptions_saveScaledBaseDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
 				Saved scaled base images

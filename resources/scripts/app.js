@@ -146,16 +146,19 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.aBadgeSrcImgPathArr = [];
 		
 		MODULE.aScalingAlgo = '0';
+		MODULE.aBadgeSizePerOutputSize = {};
 		
 		MODULE.aOutputSizes_custStrToArr = function() {
 			if (MODULE.aOutputSizesCustomStr.trim() == '') {
 				MODULE.aOutputSizesArr = [];
+				reflectOutputSizes_into_aBadgeSizePerOutputSize();
 				return;
 			}
 			try {
 				var split = MODULE.aOutputSizesCustomStr.split(',');
 				if (split.length == 0) {
 					MODULE.aOutputSizesArr = [];
+					reflectOutputSizes_into_aBadgeSizePerOutputSize();
 					return;
 				}
 				for (var i=0; i<split.length; i++) {
@@ -165,6 +168,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 					split[i] = parseInt(split[i]);
 				}
 				MODULE.aOutputSizesArr = split;
+				reflectOutputSizes_into_aBadgeSizePerOutputSize();
 			} catch(ignore) {}
 		};
 		
@@ -172,6 +176,36 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.imgPathImagesBase = {};
 		MODULE.imgPathSizesBadge = {};
 		MODULE.imgPathImagesBadge = {};
+		
+		function reflectOutputSizes_into_aBadgeSizePerOutputSize() {
+			for (var i=0; i<MODULE.aOutputSizesArr.length; i++) {
+				if (!(MODULE.aOutputSizesArr[i] in MODULE.aBadgeSizePerOutputSize)) {
+					console.log('seting:', MODULE.aOutputSizesArr[i]);
+					MODULE.aBadgeSizePerOutputSize[MODULE.aOutputSizesArr[i]] = undefined;
+				}
+			}
+			
+			for (var p in MODULE.aBadgeSizePerOutputSize) {
+				if (MODULE.aOutputSizesArr.indexOf(parseInt(p)) == -1) {
+					delete MODULE.aBadgeSizePerOutputSize[p];
+				}
+			}
+		};
+		
+		MODULE.ifThereAreAnyFactors = function() {
+			for (var p in MODULE.aBadgeSizePerOutputSize) {
+				if (MODULE.aBadgeSizePerOutputSize[p] && MODULE.aBadgeSizePerOutputSize[p] < 1) {
+					return true;
+				}
+			}
+			return false;
+		};
+		
+		MODULE.isAFactor = function(aNumber) {
+			if (aNumber < 1) {
+				return true;
+			}
+		};
 		
 		MODULE.onChangeOutputSizes = function() {
 			MODULE.aOutputSizesArr = [];
@@ -189,6 +223,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 				default:
 					// do custom
 			}
+			reflectOutputSizes_into_aBadgeSizePerOutputSize();
 		};
 		MODULE.ifBadgeNoneUncheck = function() {
 			if (MODULE.aOptions_aBadge == '0') {
@@ -252,8 +287,10 @@ function generatePreviews() {
 		
 		ctx.clearRect(0, 0, can.width, can.height); // not assuming sqaure can though, just for future in case i support non square
 		
+		var targetIconOutputSize = gAngScope.BC.aOutputSizesArr[i];
+		
 		// draw base
-		var whichNameForBase = whichNameToScaleFromToReachGoal(aBaseSourcesNameSizeObj, gAngScope.BC.aOutputSizesArr[i], parseInt(gAngScope.BC.aScalingAlgo));
+		var whichNameForBase = whichNameToScaleFromToReachGoal(aBaseSourcesNameSizeObj, targetIconOutputSize, parseInt(gAngScope.BC.aScalingAlgo));
 		var baseDrawImageArgs = [
 			gAngScope.BC.imgPathImagesBase[whichNameForBase],
 			0,
@@ -278,7 +315,15 @@ function generatePreviews() {
 		
 		// draw badge if they wanted one
 		if (parseInt(gAngScope.BC.aOptions_aBadge) > 0) {
-			var targetBadgeSize = can.width / 3; // for now assuming 1/3rd for badge size
+			var targetBadgeSizeScaleOrFactor = gAngScope.BC.aBadgeSizePerOutputSize[targetIconOutputSize];
+			if (!targetBadgeSizeScaleOrFactor) {
+				// because its null, undefined, or 0, so they dont want a badge on this icon size
+				continue;
+			} else if (targetBadgeSizeScaleOrFactor < 1) {
+				var targetBadgeSize = targetBadgeSizeScaleOrFactor * targetIconOutputSize;
+			} else {
+				var targetBadgeSize = targetBadgeSizeScaleOrFactor;
+			}
 			var whichNameForBadge = whichNameToScaleFromToReachGoal(aBadgeSourcesNameSizeObj, targetBadgeSize, parseInt(gAngScope.BC.aScalingAlgo));
 
 			// determine badge x and y
@@ -336,7 +381,7 @@ function generatePreviews() {
 			ctx.drawImage.apply(ctx, badgeDrawImageArgs);
 			
 			if (gAngScope.BC.imgPathSizesBadge[whichNameForBadge] == targetBadgeSize) {
-				can.parentNode.setAttribute('data-badge-scale-word', 'perfect');
+				can.parentNode.setAttribute('data-badge-scale-word', '=)');
 				can.parentNode.removeAttribute('data-badge-scale-from');
 			} else if (gAngScope.BC.imgPathSizesBadge[whichNameForBadge] < targetBadgeSize) {
 				can.parentNode.setAttribute('data-badge-scale-word', 'up');
