@@ -55,6 +55,7 @@ function testLoadImage(aImgOsPath, baseOrBadge) {
 			// end block link9873651
 		}
 		gAngScope.BC.imgPathSizes[img.src] = img.height;
+		gAngScope.BC.imgPathImages[img.src] = img;
 		gAngScope.$digest();
 	};
 	img.onabort = function() {
@@ -142,6 +143,8 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.aBaseSrcImgPathArr = [];
 		MODULE.aBadgeSrcImgPathArr = [];
 		
+		MODULE.aScalingAlgo = '0';
+		
 		MODULE.aOutputSizes_custStrToArr = function() {
 			if (MODULE.aOutputSizesCustomStr.trim() == '') {
 				MODULE.aOutputSizesArr = [];
@@ -164,6 +167,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		};
 		
 		MODULE.imgPathSizes = {};
+		MODULE.imgPathImages = {};
 		MODULE.onChangeOutputSizes = function() {
 			MODULE.aOutputSizesArr = [];
 			MODULE.aOutputSizesCustomStr = '';
@@ -199,10 +203,6 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			}
 		};
 		
-		MODULE.doMake = function() {
-			// send message to bootstrap with image paths
-		};
-		
 		MODULE.BrowseSelectDir = function(aArgName) {
 			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
 			fp.init(Services.wm.getMostRecentWindow('navigator:browser'), 'Pick directory the icon container file should be saved in', Ci.nsIFilePicker.modeGetFolder);
@@ -225,6 +225,94 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			fitTextOnCanvas(can, ctx, aSize, 'arial');
 		};
 	}]);
+	
+function generatePreviews() {
+	// generate aBaseSourcesNameSizeObj
+	var aBaseSourcesNameSizeObj = {};
+	for (var i=0; i<gAngScope.BC.aBaseSrcImgPathArr.length; i++) {
+		aBaseSourcesNameSizeObj[gAngScope.BC.aBaseSrcImgPathArr[i]] = gAngScope.BC.imgPathSizes[gAngScope.BC.aBaseSrcImgPathArr[i]];
+	}
+	
+	// generate aBaseSourcesNameSizeObj
+	if (parseInt(gAngScope.BC.aOptions_aBadge) > 0) {
+		var aBadgeSourcesNameSizeObj = {};
+		for (var i=0; i<gAngScope.BC.aBadgeSrcImgPathArr.length; i++) {
+			aBadgeSourcesNameSizeObj[gAngScope.BC.aBadgeSrcImgPathArr[i]] = gAngScope.BC.imgPathSizes[gAngScope.BC.aBadgeSrcImgPathArr[i]];
+		}
+	}
+		
+	for (var i=0; i<gAngScope.BC.aOutputSizesArr.length; i++) {
+		var can = document.getElementById('previews').querySelectorAll('canvas')[i];
+		var ctx = can.getContext('2d');
+		
+		// draw base
+		var whichNameForBase = whichNameToScaleFromToReachGoal(aBaseSourcesNameSizeObj, gAngScope.BC.aOutputSizesArr[i], parseInt(gAngScope.BC.aScalingAlgo));
+		var baseDrawImageArgs = [
+			gAngScope.imgPathImages[whichNameForBase],
+			0,
+			0
+		];
+		if (gAngScope.imgPathSizes[whichNameForBase] != can.width) { // assuming square image square can
+			baseDrawImageArgs.push(can.width); // scale to width
+			baseDrawImageArgs.push(can.width); // scale to height
+		}
+		ctx.drawImage.apply(null, baseDrawImageArgs);
+
+		// draw badge if they wanted one
+		if (parseInt(gAngScope.BC.aOptions_aBadge) > 0) {
+			var targetBadgeSize = can.width / 3; // for now assuming 1/3rd for badge size
+			var whichNameForBadge = whichNameToScaleFromToReachGoal(aBadgeSourcesNameSizeObj, targetBadgeSize, parseInt(gAngScope.BC.aScalingAlgo));
+			var badgeX;
+			var badgeY;
+			switch (parseInt(gAngScope.BC.aOptions_aBadge)) {
+				case 1:
+						
+						// top left
+						badgeX = 0;
+						badgeY = 0;
+						
+					break;
+				case 2:
+						
+						// top right
+						badgeX = can.width - gAngScope.imgPathSizes[whichNameForBadge]; // assuming square badge
+						badgeY = 0;
+					
+					break;
+				case 3:
+						
+						// bottom left
+						badgeX = 0
+						badgeY = can.height - gAngScope.imgPathSizes[whichNameForBadge]; // assuming square badge
+					
+					break;
+				case 4:
+						
+						// bottom right
+						badgeX = can.width - gAngScope.imgPathSizes[whichNameForBadge]; // assuming square badge // not assuming sqaure can though, just for future in case i support non square
+						badgeY = can.height - gAngScope.imgPathSizes[whichNameForBadge]; // assuming square badge // not assuming square can though, just for future in case in case i support non square
+					
+					break;
+				default:
+					throw new Error('unrecognized aOptions_aBadge');
+			}
+			var baseDrawImageArgs = [
+				gAngScope.imgPathImages[whichNameForBase],
+				badgeX,
+				badgeY
+			];
+			if (gAngScope.imgPathSizes[whichNameForBadge] != targetBadgeSize) { // assuming square image square can
+				baseDrawImageArgs.push(targetBadgeSize); // scale to width
+				baseDrawImageArgs.push(targetBadgeSize); // scale to height
+			}
+			ctx.drawImage.apply(null, baseDrawImageArgs);
+		}
+	}
+}
+
+function generateFiles() {
+	// send message to bootstrap with image paths
+}
 
 // start - common helper functions
 function fitTextOnCanvas(aCan, aCtx, text, fontface) {
@@ -248,6 +336,68 @@ function fitTextOnCanvas(aCan, aCtx, text, fontface) {
 	
     // alert('A fontsize of ' + fontsize + 'px fits this text on the canvas');
 
+}
+
+function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalingAlgo) {
+	// returns key from aSourcesNameSizeObj
+	// note: assumes that all sources are that of square dimensions
+	// aSourcesNameSizeObj is a key value pair, where keys are names (full paths for example), and value is (an obj containing key "size"/"width"/"height" with value number OR number)
+	// aGoalSize is number
+	// aScalingAlgo - it first searches for perfect match, if no perfect found then:
+		// 0 - jagged first then blurry - finds the immediate larger in aSourcesNameSizeObj and will scale down, this will give the jagged look. if no larger found, then it will find the immeidate smaller then scale up, giving the blurry look.
+		// 1 - blurry first then jagged - finds the immediate smaller in aSourcesNameSizeObj and will scale up, this will give the blurry look. if no smaller found, then it will find the immeidate larger then scale down, giving the jagged look.
+	
+	var aSourcesNameSizeArr = []; // elemen is [keyName in aSourcesNameSizeObj, square size]
+	for (var p in aSourcesNameSizeObj) {
+		aSourcesNameSizeArr.push([
+			p,
+			typeof(aSourcesNameSizeObj[p]) == 'number'
+				?
+				aSourcesNameSizeObj[p]
+				:
+				(aSourcesNameSizeObj[p].size || aSourcesNameSizeObj[p].width || aSourcesNameSizeObj[p].height)
+		]);
+	}
+	
+	if (aSourcesNameSizeArr.length == 0) {
+		throw new Error('must have at least one source in aSourcesNameSizeObj');
+	}
+	
+	// sort aSourcesNameSizeArr in asc order of size asc
+	aSourcesNameSizeArr.sort(function(a, b) {
+		return a[1] > b[1];
+	});
+	
+	var nameOfSmaller; // holds key that is found in aSourcesNameSizeObj that is the immediate smaller then goal size
+	var nameOfLarger; // holds key that is found in aSourcesNameSizeObj that is the immediate larger then goal size
+	for (var i=0; i<aSourcesNameSizeArr.length; i++) {
+		if (aSourcesNameSizeArr[i][1] == aSourcesNameSizeArr[i][1]) {
+			return aSourcesNameSizeArr[i][0]; // return name
+		} else if (aSourcesNameSizeArr[i][1] < aSourcesNameSizeArr[i][1]) {
+			nameOfSmaller = aSourcesNameSizeArr[i][0];
+		} else if (aSourcesNameSizeArr[i][1] > aSourcesNameSizeArr[i][1]) {
+			nameOfLarger = aSourcesNameSizeArr[i][0];
+		}
+	}
+				
+	switch (aScalingAlgo) {
+		case 0:
+				
+				// jagged
+				return nameOfLarger || nameOfSmaller; // returns immediate larger if found, else returns the immeidate smaller
+			
+			break;
+			
+		case 1:
+				
+				// blurry
+				return nameOfSmaller || nameOfLarger; // returns immediate smaller if found, else returns the immeidate larger
+			
+			break;
+		
+		default:
+			throw new Error('Unrecognized aScalingAlgo: ' + aScalingAlgo);
+	}
 }
 // end - common helper functions
 	

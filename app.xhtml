@@ -34,6 +34,11 @@
 		</label>
 		<br/>
 		<label>
+			Scaling Algorithm:
+			<select ng-model="BC.aScalingAlgo" ng-options="aOptName for aOptName in {'0': 'Jagged First', '1': 'Blurry First'}" />
+		</label>
+		<br/>
+		<label>
 			Badge:
 			<select ng-model="BC.aOptions_aBadge" ng-options="key as aOptName for (key, aOptName) in {0:'NONE', 1:'Top Left', 2:'Top Right', 3:'Bottom Left', 4:'Bottom Right'}" ng-change="BC.ifBadgeNoneUncheck(); BC.ifNoneScaleSaved_UncheckDontMake();"/>
 		</label>
@@ -101,6 +106,7 @@
 			</span>
 		</div>
 		<br/>
-		<input type="button" value="Make Icon Container" style="width:100%;" ng-click="doMake()"/>
+		<input type="button" value="Generate Previews" style="display:block;" onclick="generatePreviews()"/>
+		<input type="button" value="Make Icon Container" style="display:block;" onclick="generateFiles()"/>
 	</body>
 </html>
