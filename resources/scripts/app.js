@@ -40,6 +40,8 @@ function testLoadImage(aImgOsPath, baseOrBadge) {
 					return;
 				}
 			}
+			gAngScope.BC.imgPathSizesBase[img.src] = img.height; // assuming square
+			gAngScope.BC.imgPathImagesBase[img.src] = img;
 			gAngScope.BC.aBaseSrcImgPathArr.push(img.src);
 			// end block link9873651
 		} else {
@@ -51,11 +53,11 @@ function testLoadImage(aImgOsPath, baseOrBadge) {
 					return;
 				}
 			}
+			gAngScope.BC.imgPathSizesBadge[img.src] = img.height; // assuming square
+			gAngScope.BC.imgPathImagesBadge[img.src] = img;
 			gAngScope.BC.aBadgeSrcImgPathArr.push(img.src);
 			// end block link9873651
 		}
-		gAngScope.BC.imgPathSizes[img.src] = img.height;
-		gAngScope.BC.imgPathImages[img.src] = img;
 		gAngScope.$digest();
 	};
 	img.onabort = function() {
@@ -166,8 +168,11 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			} catch(ignore) {}
 		};
 		
-		MODULE.imgPathSizes = {};
-		MODULE.imgPathImages = {};
+		MODULE.imgPathSizesBase = {};
+		MODULE.imgPathImagesBase = {};
+		MODULE.imgPathSizesBadge = {};
+		MODULE.imgPathImagesBadge = {};
+		
 		MODULE.onChangeOutputSizes = function() {
 			MODULE.aOutputSizesArr = [];
 			MODULE.aOutputSizesCustomStr = '';
@@ -230,14 +235,14 @@ function generatePreviews() {
 	// generate aBaseSourcesNameSizeObj
 	var aBaseSourcesNameSizeObj = {};
 	for (var i=0; i<gAngScope.BC.aBaseSrcImgPathArr.length; i++) {
-		aBaseSourcesNameSizeObj[gAngScope.BC.aBaseSrcImgPathArr[i]] = gAngScope.BC.imgPathSizes[gAngScope.BC.aBaseSrcImgPathArr[i]];
+		aBaseSourcesNameSizeObj[gAngScope.BC.aBaseSrcImgPathArr[i]] = gAngScope.BC.imgPathSizesBase[gAngScope.BC.aBaseSrcImgPathArr[i]];
 	}
 	
 	// generate aBaseSourcesNameSizeObj
 	if (parseInt(gAngScope.BC.aOptions_aBadge) > 0) {
 		var aBadgeSourcesNameSizeObj = {};
 		for (var i=0; i<gAngScope.BC.aBadgeSrcImgPathArr.length; i++) {
-			aBadgeSourcesNameSizeObj[gAngScope.BC.aBadgeSrcImgPathArr[i]] = gAngScope.BC.imgPathSizes[gAngScope.BC.aBadgeSrcImgPathArr[i]];
+			aBadgeSourcesNameSizeObj[gAngScope.BC.aBadgeSrcImgPathArr[i]] = gAngScope.BC.imgPathSizesBadge[gAngScope.BC.aBadgeSrcImgPathArr[i]];
 		}
 	}
 		
@@ -245,23 +250,27 @@ function generatePreviews() {
 		var can = document.getElementById('previews').querySelectorAll('canvas')[i];
 		var ctx = can.getContext('2d');
 		
+		ctx.clearRect(0, 0, can.width, can.height); // not assuming sqaure can though, just for future in case i support non square
+		
 		// draw base
 		var whichNameForBase = whichNameToScaleFromToReachGoal(aBaseSourcesNameSizeObj, gAngScope.BC.aOutputSizesArr[i], parseInt(gAngScope.BC.aScalingAlgo));
 		var baseDrawImageArgs = [
-			gAngScope.imgPathImages[whichNameForBase],
+			gAngScope.BC.imgPathImagesBase[whichNameForBase],
 			0,
 			0
 		];
-		if (gAngScope.imgPathSizes[whichNameForBase] != can.width) { // assuming square image square can
+		if (gAngScope.BC.imgPathSizesBase[whichNameForBase] != can.width) { // assuming square image square can
 			baseDrawImageArgs.push(can.width); // scale to width
 			baseDrawImageArgs.push(can.width); // scale to height
 		}
-		ctx.drawImage.apply(null, baseDrawImageArgs);
+		ctx.drawImage.apply(ctx, baseDrawImageArgs);
 
 		// draw badge if they wanted one
 		if (parseInt(gAngScope.BC.aOptions_aBadge) > 0) {
 			var targetBadgeSize = can.width / 3; // for now assuming 1/3rd for badge size
 			var whichNameForBadge = whichNameToScaleFromToReachGoal(aBadgeSourcesNameSizeObj, targetBadgeSize, parseInt(gAngScope.BC.aScalingAlgo));
+
+			// determine badge x and y
 			var badgeX;
 			var badgeY;
 			switch (parseInt(gAngScope.BC.aOptions_aBadge)) {
@@ -275,7 +284,7 @@ function generatePreviews() {
 				case 2:
 						
 						// top right
-						badgeX = can.width - gAngScope.imgPathSizes[whichNameForBadge]; // assuming square badge
+						badgeX = can.width - targetBadgeSize; // assuming square badge
 						badgeY = 0;
 					
 					break;
@@ -283,29 +292,37 @@ function generatePreviews() {
 						
 						// bottom left
 						badgeX = 0
-						badgeY = can.height - gAngScope.imgPathSizes[whichNameForBadge]; // assuming square badge
+						badgeY = can.height - targetBadgeSize; // assuming square badge
 					
 					break;
 				case 4:
 						
 						// bottom right
-						badgeX = can.width - gAngScope.imgPathSizes[whichNameForBadge]; // assuming square badge // not assuming sqaure can though, just for future in case i support non square
-						badgeY = can.height - gAngScope.imgPathSizes[whichNameForBadge]; // assuming square badge // not assuming square can though, just for future in case in case i support non square
+						badgeX = can.width - targetBadgeSize; // assuming square badge // not assuming sqaure can though, just for future in case i support non square
+						badgeY = can.height - targetBadgeSize; // assuming square badge // not assuming square can though, just for future in case in case i support non square
 					
 					break;
 				default:
 					throw new Error('unrecognized aOptions_aBadge');
 			}
-			var baseDrawImageArgs = [
-				gAngScope.imgPathImages[whichNameForBase],
+			/* 
+			alert([
+				parseInt(gAngScope.BC.aOptions_aBadge),
+				can.width,
+				badgeX,
+				badgeY
+			].join('\n\n'));
+			*/
+			var badgeDrawImageArgs = [
+				gAngScope.BC.imgPathImagesBadge[whichNameForBadge],
 				badgeX,
 				badgeY
 			];
-			if (gAngScope.imgPathSizes[whichNameForBadge] != targetBadgeSize) { // assuming square image square can
-				baseDrawImageArgs.push(targetBadgeSize); // scale to width
-				baseDrawImageArgs.push(targetBadgeSize); // scale to height
+			if (gAngScope.BC.imgPathSizesBadge[whichNameForBadge] != targetBadgeSize) { // assuming square image square can
+				badgeDrawImageArgs.push(targetBadgeSize); // scale to width
+				badgeDrawImageArgs.push(targetBadgeSize); // scale to height
 			}
-			ctx.drawImage.apply(null, baseDrawImageArgs);
+			ctx.drawImage.apply(ctx, badgeDrawImageArgs);
 		}
 	}
 }
@@ -371,12 +388,14 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 	var nameOfSmaller; // holds key that is found in aSourcesNameSizeObj that is the immediate smaller then goal size
 	var nameOfLarger; // holds key that is found in aSourcesNameSizeObj that is the immediate larger then goal size
 	for (var i=0; i<aSourcesNameSizeArr.length; i++) {
-		if (aSourcesNameSizeArr[i][1] == aSourcesNameSizeArr[i][1]) {
+		if (aSourcesNameSizeArr[i][1] == aGoalSize) {
+			console.info('for goal size of', aGoalSize, 'returning exact match at name:', aSourcesNameSizeArr[i][0]);
 			return aSourcesNameSizeArr[i][0]; // return name
-		} else if (aSourcesNameSizeArr[i][1] < aSourcesNameSizeArr[i][1]) {
+		} else if (aSourcesNameSizeArr[i][1] < aGoalSize) {
 			nameOfSmaller = aSourcesNameSizeArr[i][0];
-		} else if (aSourcesNameSizeArr[i][1] > aSourcesNameSizeArr[i][1]) {
+		} else if (aSourcesNameSizeArr[i][1] > aGoalSize) {
 			nameOfLarger = aSourcesNameSizeArr[i][0];
+			break; // as otherwise it will set nameOfLarger to the largest and not the immediate larger
 		}
 	}
 				
@@ -384,6 +403,11 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 		case 0:
 				
 				// jagged
+				if (nameOfLarger) {
+					console.info('for goal size of', aGoalSize, 'returning jagged first because it was found. so match at name:', aSourcesNameSizeArr, 'nameOfLarger:', nameOfLarger);
+				} else {
+					console.info('for goal size of', aGoalSize, 'returning blurry second because it no larger was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
+				}
 				return nameOfLarger || nameOfSmaller; // returns immediate larger if found, else returns the immeidate smaller
 			
 			break;
@@ -391,6 +415,11 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 		case 1:
 				
 				// blurry
+				if (nameOfSmaller) {
+					console.info('for goal size of', aGoalSize, 'returning blurry first because it was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
+				} else {
+					console.info('for goal size of', aGoalSize, 'returning jagged second because it no smaller was found. so match at name:', aSourcesNameSizeArr, 'nameOfLarger:', nameOfLarger);
+				}
 				return nameOfSmaller || nameOfLarger; // returns immediate smaller if found, else returns the immeidate larger
 			
 			break;

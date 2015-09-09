@@ -35,7 +35,7 @@
 		<br/>
 		<label>
 			Scaling Algorithm:
-			<select ng-model="BC.aScalingAlgo" ng-options="aOptName for aOptName in {'0': 'Jagged First', '1': 'Blurry First'}" />
+			<select ng-model="BC.aScalingAlgo" ng-options="key as aOptName for (key, aOptName) in {'0': 'Jagged First', '1': 'Blurry First'}" />
 		</label>
 		<br/>
 		<label>
