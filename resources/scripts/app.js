@@ -25,11 +25,47 @@ const clientId = new Date().getTime();
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'app.properties?' + core.addon.cache_key) }); // Randomize URI to work around bug 719376
 
-// alert(myServices.sb.GetStringFromName('addon_desc'));
+function handleDrop(e) {
+	e.stopPropagation(); // Stops some browsers from redirecting.
+	e.preventDefault();
+
+	var files = e.dataTransfer.files;
+	for (var i = 0, f; f = files[i]; i++) {
+		// Read the File objects in this FileList.
+		console.log(i, 'f:', f);
+	}
+}
+
+function handleDragOver(e) {
+	if (e.preventDefault) {
+		e.preventDefault(); // Necessary. Allows us to drop.
+	}
+
+	e.dataTransfer.dropEffect = 'copy';  // See the section on the DataTransfer object.
+
+	return false;
+}
+
+function handleDocElDragOver(e) {
+	if (e.preventDefault) {
+		e.preventDefault(); // Necessary. Allows us to drop.
+	}
+
+	e.dataTransfer.dropEffect = 'none';  // See the section on the DataTransfer object.
+
+	return false;
+}
 
 function onPageReady() {
 	
+	document.documentElement.addEventListener('dragover', handleDocElDragOver, true);
+	
 	// message bootstrap, tell him im open, and that he should startup ICGenWorker if its not yet ready
+	document.getElementById('dropTarget_base').addEventListener('drop', handleDrop, true);
+	document.getElementById('dropTarget_base').addEventListener('dragover', handleDragOver, true);
+	
+	document.getElementById('dropTarget_badge').addEventListener('drop', handleDrop, true);
+	document.getElementById('dropTarget_badge').addEventListener('dragover', handleDragOver, true);
 }
 
 function onPageUnload() {
@@ -48,6 +84,8 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.aCreateType = 'ICNS';
 		MODULE.aOptions_aBadge = '0';
 		
+		MODULE.aCreatePathDirArr = ['rawr','a'];
+		
 		MODULE.ifBadgeNoneUncheck = function() {
 			if (MODULE.aOptions_aBadge == '0') {
 				MODULE.ui_saveScaledBaseDir = undefined;
@@ -62,6 +100,34 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			} else {
 				MODULE.ui_dontMakeIconContainer = true;
 			}
+		};
+		
+		MODULE.doMake = function() {
+			// send message to bootstrap with image paths
+		};
+		
+		MODULE.BrowseAndAddDir = function() {
+			var fp = Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);
+			fp.init(Services.wm.getMostRecentWindow('navigator:browser'), 'Pick directory the icon container file should be saved in', Ci.nsIFilePicker.modeGetFolder);
+			fp.appendFilters(Ci.nsIFilePicker.filterAll);
+
+			var rv = fp.show();
+			if (rv == Ci.nsIFilePicker.returnOK) {
+				
+				if (MODULE.aCreatePathDirArr.indexOf(fp.file.path) > -1) {
+					alert('Error: This directory path is already in the list of directories to output to, it will not be added.');
+				} else {
+					MODULE.aCreatePathDirArr.push(fp.file.path);
+				}
+
+			}// else { // cancelled	}
+		};
+		
+		MODULE.RemoveSelectedDirs = function() {
+			for (var i=0; i<MODULE.aCreatePathDirArr_selected.length; i++) {
+				MODULE.aCreatePathDirArr.splice(MODULE.aCreatePathDirArr.indexOf(MODULE.aCreatePathDirArr_selected[i]), 1);
+			}
+			MODULE.aCreatePathDirArr_selected = null;
 		};
 	}]);
 

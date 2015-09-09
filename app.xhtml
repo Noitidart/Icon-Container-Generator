@@ -16,8 +16,13 @@
 		<h2>Parameters</h2>
 		<label>
 			Ouput Name:
-			<input ng-model="BC.aCreateName" />
+			<input ng-model="BC.aCreateName" type="text"/>
 		</label>
+		<br/>
+		Ouput Directory: <input type="button" value="Browse and Add Directory" ng-click="BC.BrowseAndAddDir()"/>
+		<br/>
+		<select ng-model="BC.aCreatePathDirArr_selected" multiple="true"  ng-options="aOptName for aOptName in BC.aCreatePathDirArr" />
+		<input type="button" value="Remove Selected Directory" ng-click="BC.RemoveSelectedDirs()" ng-show="BC.aCreatePathDirArr_selected"/>
 		<br/>
 		<label>
 			Output Type:
@@ -63,15 +68,17 @@
 		<br/>
 		<br/>
 		Source {{BC.aOptions_aBadge != '0' ? 'Base ' : ''}}Images:
-		<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">Drop Images Here</div>
+		<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_base">Drop Images Here</div>
 		<br/>
 		Output Images:
 		<div style="display:inline-block; width: 400px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">preview of images that will be put into the container file</div>
 		<br/>
 		<span ng-show="BC.aOptions_aBadge != '0'">
 			Source Badge Images:
-			<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">Drop Images Here</div>
+			<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_badge">Drop Images Here</div>
 			<br/>
 		</span>
+		<br/>
+		<input type="button" value="Make Icon Container" style="width:100%;" ng-click="doMake()"/>
 	</body>
 </html>
