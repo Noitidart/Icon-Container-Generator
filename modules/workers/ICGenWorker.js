@@ -38,12 +38,12 @@ convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/english.xml
 convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/locale.xml',  '/usr/local/etc/ImageMagick/');
 convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/delegates.xml',  '/usr/local/etc/ImageMagick/');
 
-convert.addUrl(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64.png'), '/');
+convert.addUrl(OS.Path.toFileURI(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64.png')), '/');
 
   convert.allDone().then(function() {
     convert.run('-rotate', '90', '/Image-Box-64.png', '/Image-Box-64-rot90.jpeg').then(function() {
-      convert.getFile('/Image-Box-64-rot90.jpeg').then(function(real_contents) {
-		  OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt'), "data:image/jpeg;base64," + btoa(real_contents), { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt.tmp') });
+      convert.getFile('Image-Box-64-rot90.jpeg').then(function(real_contents) {
+		  OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot.jpeg'), new Uint8Array(real_contents), { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt.tmp') });
       });
     });
   });
