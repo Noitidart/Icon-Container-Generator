@@ -63,9 +63,29 @@ function onPageReady() {
 	// message bootstrap, tell him im open, and that he should startup ICGenWorker if its not yet ready
 	document.getElementById('dropTarget_base').addEventListener('drop', handleDrop, true);
 	document.getElementById('dropTarget_base').addEventListener('dragover', handleDragOver, true);
+
 	
 	document.getElementById('dropTarget_badge').addEventListener('drop', handleDrop, true);
 	document.getElementById('dropTarget_badge').addEventListener('dragover', handleDragOver, true);
+	
+	var mutObs_base = new MutationObserver(function(mutations) {
+	  mutations.forEach(function(mutation) {
+		console.log(mutation);
+		if (mutation.type == 'childList' && mutation.addedNodes.length > 0) {
+			for (var i=0; i<mutation.addedNodes.length; i++) {
+				if (mutation.addedNodes[i].nodeName == 'canvas') {
+					var can = mutation.addedNodes[i];
+					var ctx = mutation.addedNodes[i].getContext('2d');
+					fitTextOnCanvas(can, ctx, can.width, 'arial')
+				}
+			}
+			
+		}
+	  });    
+	});
+	mutObs_base.observe(document.getElementById('previews'), {childList:true});
+
+	
 }
 
 function onPageUnload() {
@@ -165,6 +185,29 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		};
 	}]);
 
+// start - common helper functions
+function fitTextOnCanvas(aCan, aCtx, text, fontface) {
+	// centers text on a canvas and makes it fit the size of canvas
+	
+    // start with a large font size
+    var fontsize = Math.max(aCan.width, aCan.height);
 
+    // lower the font size until the text fits the canvas
+	var textMeasure;
+    do {
+        fontsize--;
+        aCtx.font = 'bold ' + fontsize + 'px ' + fontface;
+		textMeasure = aCtx.measureText(text);
+    } while (textMeasure.width > aCan.width)
+
+    // draw the text
+	aCtx.textBaseline = 'middle';
+    aCtx.fillText(text, (aCan.width / 2) - (textMeasure.width / 2), (aCan.height / 2));
+	
+    // alert('A fontsize of ' + fontsize + 'px fits this text on the canvas');
+
+}
+// end - common helper functions
+	
 document.addEventListener('DOMContentLoaded', onPageReady, false);
 document.addEventListener('unload', onPageUnload, false);

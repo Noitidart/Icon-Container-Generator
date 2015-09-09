@@ -76,10 +76,8 @@
 			<span ng-show="!BC.aOutputSizesArr || BC.aOutputSizesArr.length == 0">
 				preview of images that will be put into the container file
 			</span>
-			<span ng-show="BC.aOutputSizesArr">
-				<div ng-repeat="aSize in BC.aOutputSizesArr" class="outputImg_blank" style="width:{{aSize}}px; height:{{aSize}}px; font-size:{{aSize-2}}px; line-height:{{aSize}}px;">
-					{{aSize}}
-				</div>
+			<span ng-show="BC.aOutputSizesArr" id="previews">
+				<canvas ng-repeat="aSize in BC.aOutputSizesArr" class="outputImg_blank" width="{{aSize}}" height="{{aSize}}" />
 			</span>
 		</div>
 		<br/>
