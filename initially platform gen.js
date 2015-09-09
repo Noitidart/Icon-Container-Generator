@@ -1,15 +1,15 @@
 // all functions use this format for 
 // note for profilist, ill know the paths, so no need to select dir and use os.file to get contents for aBadgeSrcImgPathArr and aBaseSrcImgPathArr, i save them to a preset folder
 
-function returnIconset(aCreateType, aCreateName, aCreatePathDirArr, aOutputSizesArr) {
+function returnIconset(aCreateType, aCreateName, aCreatePathDir, aOutputSizesArr) {
 	// aCreateType - string. future plan to support things like tiff. in future maybe make this an arr, so can make multiple types in one shot.
 		// ico - can be done on any os
 		// linux - installation part is linux dependent
 		// icns - requires mac, as i use iconutils
 	// aCreateName - same across all os, name to create icon container with
-	// aCreatePathDirArr
-		// win and mac - os paths to directories you want icon written to, it will writeAtomic to each of these dirs
-		// linux - array of theme names, if null, it will default to ['hicolor']
+	// aCreatePathDir
+		// win and mac - os path to directory you want icon written to, it will writeAtomic
+		// linux - array of theme names, if null, it will default to ['hicolor']. if themes provided, 'hicolor' is not pushed in, so include it if you want it.
 	// aBaseSrcImgPathArr
 		// same across all os - os paths of images to be used as sources for bases, the sizes will be auto determined, if any of them are not square it will throw
 	// aOutputSizesArr - sizes wanted in iconset
@@ -25,8 +25,8 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDirArr, aOutputSizes
 		// 4 - bottomright
 	// aOptions.aBadgeSrcImgPathArr
 		// same across all os - os paths of images to be used as sources for badges, the sizes will be auto determined, if any of them are not square it will throw
-	// aOptions.aBageSizePerIconSize
-		// same across all os - if 
+	// aOptions.aBageSizePerOutputSize
+		// same across all os - obj key value pair. key is base size, value is badge size. the size the badge should be scaled to for the output icon size
 	// aOptions.saveScaledBadgeDir
 		// same across all os - set to a os path if you want the scaled badges to be saved, will be pngs
 	// aOptions.saveScaledBaseDir

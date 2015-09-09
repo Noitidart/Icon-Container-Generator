@@ -68,24 +68,6 @@ function onPageReady() {
 	document.getElementById('dropTarget_badge').addEventListener('drop', handleDrop, true);
 	document.getElementById('dropTarget_badge').addEventListener('dragover', handleDragOver, true);
 	
-	var mutObs_base = new MutationObserver(function(mutations) {
-	  mutations.forEach(function(mutation) {
-		console.log(mutation);
-		if (mutation.type == 'childList' && mutation.addedNodes.length > 0) {
-			for (var i=0; i<mutation.addedNodes.length; i++) {
-				if (mutation.addedNodes[i].nodeName == 'canvas') {
-					var can = mutation.addedNodes[i];
-					var ctx = mutation.addedNodes[i].getContext('2d');
-					fitTextOnCanvas(can, ctx, can.width, 'arial')
-				}
-			}
-			
-		}
-	  });    
-	});
-	mutObs_base.observe(document.getElementById('previews'), {childList:true});
-
-	
 }
 
 function onPageUnload() {
@@ -104,10 +86,10 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.aCreateType = 'ICNS';
 		MODULE.aOptions_aBadge = '0';
 		
-		MODULE.aCreatePathDirArr = ['rawr','a'];
+		MODULE.aCreatePathDirArr = [];
 		
 		MODULE.aOutputSizesType = 'Custom';
-		MODULE.aOutputSizesArr = [10, 20];
+		MODULE.aOutputSizesArr = [];
 		
 		MODULE.aOutputSizes_custStrToArr = function() {
 			try {
@@ -183,6 +165,15 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			}
 			MODULE.aCreatePathDirArr_selected = null;
 		};
+		
+		MODULE.previewInserted = function(aSize, aIndex) {
+			var can = document.getElementById('previews').querySelectorAll('canvas')[aIndex];
+			console.info('can:', can)
+			var ctx = can.getContext('2d');
+			can.width = aSize;
+			can.height = aSize;
+			fitTextOnCanvas(can, ctx, aSize, 'arial')
+		}
 	}]);
 
 // start - common helper functions
