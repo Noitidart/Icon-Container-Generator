@@ -23,6 +23,28 @@ var OSStuff = {}; // global vars populated by init, based on OS
 // imported scripts have access to global vars on MainWorker.js
 importScripts(core.addon.path.content + 'modules/cutils.jsm');
 importScripts(core.addon.path.content + 'modules/ctypes_math.jsm');
+importScripts(core.addon.path.content + 'modules/unixToolbox/interface.js');
+
+unixToolboxInit(this);
+var convert = new Interface(core.addon.path.content + 'modules/unixToolbox/convert-worker.js');
+convert.on_stdout = function(txt) { console.log(txt); };
+convert.on_stderr = function(txt) { console.log(txt); };
+
+
+convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/magic.xml',   '/usr/local/etc/ImageMagick/', true);
+convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/coder.xml',   '/usr/local/etc/ImageMagick/');
+convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/policy.xml',  '/usr/local/etc/ImageMagick/');
+convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/english.xml', '/usr/local/etc/ImageMagick/');
+convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/locale.xml',  '/usr/local/etc/ImageMagick/');
+convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/delegates.xml',  '/usr/local/etc/ImageMagick/');
+
+  convert.allDone().then(function() {
+    convert.run('-rotate', '90', OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64.png'), OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot90.jpeg')).then(function() {
+      convert.getFile('Image-Box-64-rot90.jpeg').then(function(real_contents) {
+		  OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt'), "data:image/jpeg;base64," + btoa(real_contents), { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt.tmp') });
+      });
+    });
+  });
 
 // Setup SICWorker
 // instructions on using SICWorker
