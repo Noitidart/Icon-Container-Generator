@@ -166,6 +166,9 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 						return;
 					}
 					split[i] = parseInt(split[i]);
+					if (split[i] == 0) {
+						return;
+					}
 				}
 				MODULE.aOutputSizesArr = split;
 				reflectOutputSizes_into_aBadgeSizePerOutputSize();
@@ -181,7 +184,11 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			for (var i=0; i<MODULE.aOutputSizesArr.length; i++) {
 				if (!(MODULE.aOutputSizesArr[i] in MODULE.aBadgeSizePerOutputSize)) {
 					console.log('seting:', MODULE.aOutputSizesArr[i]);
-					MODULE.aBadgeSizePerOutputSize[MODULE.aOutputSizesArr[i]] = undefined;
+					if (MODULE.aOutputSizesArr[i] == 16) {
+						MODULE.aBadgeSizePerOutputSize[MODULE.aOutputSizesArr[i]] = 10;
+					} else {
+						MODULE.aBadgeSizePerOutputSize[MODULE.aOutputSizesArr[i]] = 0.5;
+					}
 				}
 			}
 			
@@ -322,6 +329,8 @@ function generatePreviews() {
 			var targetBadgeSizeScaleOrFactor = gAngScope.BC.aBadgeSizePerOutputSize[targetIconOutputSize];
 			if (!targetBadgeSizeScaleOrFactor) {
 				// because its null, undefined, or 0, so they dont want a badge on this icon size
+				can.parentNode.removeAttribute('data-badge-scale-word');
+				can.parentNode.removeAttribute('data-badge-scale-from');
 				continue;
 			} else if (targetBadgeSizeScaleOrFactor < 1) {
 				var targetBadgeSize = Math.round(targetBadgeSizeScaleOrFactor * targetIconOutputSize);
@@ -395,6 +404,9 @@ function generatePreviews() {
 				can.parentNode.setAttribute('data-badge-scale-from', gAngScope.BC.imgPathSizesBadge[whichNameForBadge]);
 			}
 			
+		} else {
+			can.parentNode.removeAttribute('data-badge-scale-word');
+			can.parentNode.removeAttribute('data-badge-scale-from');
 		}
 	}
 }
