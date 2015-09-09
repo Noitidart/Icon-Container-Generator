@@ -38,6 +38,8 @@ convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/english.xml
 convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/locale.xml',  '/usr/local/etc/ImageMagick/');
 convert.addUrl(core.addon.path.content + 'modules/unixToolbox/config/delegates.xml',  '/usr/local/etc/ImageMagick/');
 
+convert.addUrl(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64.png'), '/');
+
   convert.allDone().then(function() {
     convert.run('-rotate', '90', OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64.png'), OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot90.jpeg')).then(function() {
       convert.getFile('Image-Box-64-rot90.jpeg').then(function(real_contents) {
