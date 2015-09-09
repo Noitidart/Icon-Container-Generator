@@ -30,7 +30,7 @@
 		<label>
 			Output Sizes:
 			<select ng-model="BC.aOutputSizesType" ng-change="BC.onChangeOutputSizes()" ng-options="aOptName for aOptName in ['Custom', 'Windows', 'Mac OS X', 'Linux']" />
-			<input type="text" ng-model="BC.aOutputSizesCustomStr" ng-change="BC.aOutputSizes_custStrToArr()" ng-show="BC.aOutputSizesType == 'Custom'" placeholder="Type comma seperated list of sizes" />
+			<input type="text" ng-model="BC.aOutputSizesCustomStr" ng-change="BC.aOutputSizes_custStrToArr()" ng-show="BC.aOutputSizesType == 'Custom'" size="40" placeholder="Comma delimited sizes (Ex: 16,32,64)" />
 		</label>
 		<br/>
 		<label>
@@ -70,7 +70,14 @@
 		<br/>
 		<br/>
 		Source {{BC.aOptions_aBadge != '0' ? 'Base ' : ''}}Images:
-		<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_base">Drop Images Here</div>
+		<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_base">
+				<span ng-show="!BC.aBaseSrcImgPathArr || BC.aBaseSrcImgPathArr.length == 0">
+					Drop Images Here
+				</span>
+				<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizes[aSrc]}}" ng-repeat="aSrc in BC.aBaseSrcImgPathArr">
+					<img class="aSrcImg" src="{{aSrc}}" />
+				</span>
+		</div>
 		<br/>
 		Output Images:
 		<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">
@@ -84,7 +91,14 @@
 		<br/>
 		<span ng-show="BC.aOptions_aBadge != '0'">
 			Source Badge Images:
-			<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_badge">Drop Images Here</div>
+			<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_badge">
+					<span ng-show="!BC.aBadgeSrcImgPathArr || BC.aBadgeSrcImgPathArr.length == 0">
+						Drop Images Here
+					</span>
+					<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizes[aSrc]}}" ng-repeat="aSrc in BC.aBadgeSrcImgPathArr">
+						<img class="aSrcImg" src="{{aSrc}}" />
+					</span>
+			</div>
 			<br/>
 		</span>
 		<br/>

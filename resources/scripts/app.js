@@ -25,14 +25,58 @@ const clientId = new Date().getTime();
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'app.properties?' + core.addon.cache_key) }); // Randomize URI to work around bug 719376
 
-function handleDrop(e) {
+function testLoadImage(aImgOsPath, baseOrBadge) {
+	var img = new Image();
+	img.onload = function() {
+		if (img.width != img.height) {
+			alert('ERROR: Image is not a square shape so will not be used.\n\nFile Name: "' + OS.Path.basename(aImgOsPath) + '"\nPath: "' + aImgOsPath + '"');
+			return;
+		}
+		if (baseOrBadge == 'base') {
+			// start copy block link9873651 - because for some reason i cant pass around angular vars that are arrays by reference, it causes some issues
+			for (var i=0; i<gAngScope.BC.aBaseSrcImgPathArr.length; i++) {
+				if (gAngScope.BC.aBaseSrcImgPathArr[i].toLowerCase() == img.src.toLowerCase()) {
+					alert('ERROR: This image was already found in the list so will not be added again.\n\nFile Name: "' + OS.Path.basename(aImgOsPath) + '"\nPath: "' + aImgOsPath + '"');
+					return;
+				}
+			}
+			gAngScope.BC.aBaseSrcImgPathArr.push(img.src);
+			// end block link9873651
+		} else {
+			// its _badge			
+			// start copy block link9873651 - because for some reason i cant pass around angular vars that are arrays by reference, it causes some issues // i tried the method var aArrPush = gAngScope.BC.aBadgeSrcImgPathArr;
+			for (var i=0; i<gAngScope.BC.aBadgeSrcImgPathArr.length; i++) {
+				if (gAngScope.BC.aBadgeSrcImgPathArr[i].toLowerCase() == img.src.toLowerCase()) {
+					alert('ERROR: This image was already found in the list so will not be added again.\n\nFile Name: "' + OS.Path.basename(aImgOsPath) + '"\nPath: "' + aImgOsPath + '"');
+					return;
+				}
+			}
+			gAngScope.BC.aBadgeSrcImgPathArr.push(img.src);
+			// end block link9873651
+		}
+		gAngScope.BC.imgPathSizes[img.src] = img.height;
+		gAngScope.$digest();
+	};
+	img.onabort = function() {
+		alert('WARNING: You maybe hit stop or escape key, as loading of image was aborted.\n\nFile Name: "' + OS.Path.basename(aImgOsPath) + '"\nPath: "' + aImgOsPath + '"');
+	};
+	img.onerror = function() {
+		alert('ERROR: File is not an image so will not be used.\n\nFile Name: "' + OS.Path.basename(aImgOsPath) + '"\nPath: "' + aImgOsPath + '"');
+	};
+	img.src = aImgOsPath.toLowerCase().substr(0, 9) == 'chrome://' ? aImgOsPath : OS.Path.toFileURI(aImgOsPath);
+}
+
+function handleDrop(baseOrBadge, e) {
 	e.stopPropagation(); // Stops some browsers from redirecting.
 	e.preventDefault();
 
+	console.error('baseOrBadge == ', baseOrBadge);
+	
 	var files = e.dataTransfer.files;
 	for (var i = 0, f; f = files[i]; i++) {
 		// Read the File objects in this FileList.
 		console.log(i, 'f:', f);
+		testLoadImage(f.mozFullPath, baseOrBadge);
 	}
 }
 
@@ -61,11 +105,11 @@ function onPageReady() {
 	document.documentElement.addEventListener('dragover', handleDocElDragOver, true);
 	
 	// message bootstrap, tell him im open, and that he should startup ICGenWorker if its not yet ready
-	document.getElementById('dropTarget_base').addEventListener('drop', handleDrop, true);
+	document.getElementById('dropTarget_base').addEventListener('drop', handleDrop.bind(null, 'base'), true);
 	document.getElementById('dropTarget_base').addEventListener('dragover', handleDragOver, true);
 
 	
-	document.getElementById('dropTarget_badge').addEventListener('drop', handleDrop, true);
+	document.getElementById('dropTarget_badge').addEventListener('drop', handleDrop.bind(null, 'badge'), true);
 	document.getElementById('dropTarget_badge').addEventListener('dragover', handleDragOver, true);
 	
 }
@@ -75,6 +119,10 @@ function onPageUnload() {
 }
 
 var	ANG_APP = angular.module('iconcontainergenerator', [])
+    .config(['$compileProvider', function( $compileProvider ) {
+			$compileProvider.imgSrcSanitizationWhitelist(/^\s*(filesystem:file|file):/);
+		}
+    ])
 	.controller('BodyController', ['$scope', function($scope) {
 		
 		var MODULE = this;
@@ -91,20 +139,31 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.aOutputSizesType = 'Custom';
 		MODULE.aOutputSizesArr = [];
 		
+		MODULE.aBaseSrcImgPathArr = [];
+		MODULE.aBadgeSrcImgPathArr = [];
+		
 		MODULE.aOutputSizes_custStrToArr = function() {
+			if (MODULE.aOutputSizesCustomStr.trim() == '') {
+				MODULE.aOutputSizesArr = [];
+				return;
+			}
 			try {
 				var split = MODULE.aOutputSizesCustomStr.split(',');
 				if (split.length == 0) {
+					MODULE.aOutputSizesArr = [];
 					return;
 				}
 				for (var i=0; i<split.length; i++) {
 					if (!split[i] || split[i] == '' || isNaN(split[i])) {
 						return;
 					}
+					split[i] = parseInt(split[i]);
 				}
 				MODULE.aOutputSizesArr = split;
 			} catch(ignore) {}
 		};
+		
+		MODULE.imgPathSizes = {};
 		MODULE.onChangeOutputSizes = function() {
 			MODULE.aOutputSizesArr = [];
 			MODULE.aOutputSizesCustomStr = '';
@@ -157,13 +216,6 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			}// else { // cancelled	}
 		};
 		
-		MODULE.RemoveSelectedDirs = function() {
-			for (var i=0; i<MODULE.aCreatePathDirArr_selected.length; i++) {
-				MODULE.aCreatePathDirArr.splice(MODULE.aCreatePathDirArr.indexOf(MODULE.aCreatePathDirArr_selected[i]), 1);
-			}
-			MODULE.aCreatePathDirArr_selected = null;
-		};
-		
 		MODULE.previewInserted = function(aSize, aIndex) {
 			var can = document.getElementById('previews').querySelectorAll('canvas')[aIndex];
 			console.info('can:', can)
@@ -171,7 +223,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			can.width = aSize;
 			can.height = aSize;
 			fitTextOnCanvas(can, ctx, aSize, 'arial')
-		}
+		};
 	}]);
 
 // start - common helper functions
