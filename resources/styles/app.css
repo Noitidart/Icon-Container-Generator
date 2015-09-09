@@ -10,3 +10,12 @@ input[type=text] {
 select[multiple] {
 	min-width: 25em;
 }
+
+.outputImg_blank {
+	display: inline-block;
+	border: 2px dashed steelblue;
+	border-radius: 3px;
+	background-color: #d7d7d7;
+	margin: 10px;
+	vertical-align: top;
+}

@@ -15,23 +15,24 @@
 		<h1>Icon Container Generator</h1>
 		<h2>Parameters</h2>
 		<label>
+			Output Type:
+			<select ng-model="BC.aCreateType" ng-change="" ng-options="aOptName for aOptName in ['ICNS', 'ICO', 'Linux Install']"/>
+		</label>
+		<br/>
+		<label>
 			Ouput Name:
 			<input ng-model="BC.aCreateName" type="text"/>
 		</label>
 		<br/>
 		Ouput Directory: <input type="button" value="Browse and Add Directory" ng-click="BC.BrowseAndAddDir()"/>
 		<br/>
-		<select ng-model="BC.aCreatePathDirArr_selected" multiple="true"  ng-options="aOptName for aOptName in BC.aCreatePathDirArr" />
+		<select ng-model="BC.aCreatePathDirArr_selected" multiple="true" ng-options="aOptName for aOptName in BC.aCreatePathDirArr" />
 		<input type="button" value="Remove Selected Directory" ng-click="BC.RemoveSelectedDirs()" ng-show="BC.aCreatePathDirArr_selected"/>
 		<br/>
 		<label>
-			Output Type:
-			<select ng-model="BC.aCreateType" ng-options="aOptName for aOptName in ['ICNS', 'ICO', 'Linux Install']"/>
-		</label>
-		<br/>
-		<label>
 			Output Sizes:
-			<input type="text" size="4"/>
+			<select ng-model="BC.aOutputSizesType" ng-change="BC.onChangeOutputSizes()" ng-options="aOptName for aOptName in ['Custom', 'Windows', 'Mac OS X', 'Linux']" />
+			<input type="text" ng-model="BC.aOutputSizesCustomStr" ng-change="BC.aOutputSizes_custStrToArr()" ng-show="BC.aOutputSizesType == 'Custom'" placeholder="Type comma seperated list of sizes" />
 		</label>
 		<br/>
 		<label>
@@ -71,7 +72,16 @@
 		<div style="display:inline-block; width: 200px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_base">Drop Images Here</div>
 		<br/>
 		Output Images:
-		<div style="display:inline-block; width: 400px; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">preview of images that will be put into the container file</div>
+		<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">
+			<span ng-show="!BC.aOutputSizesArr || BC.aOutputSizesArr.length == 0">
+				preview of images that will be put into the container file
+			</span>
+			<span ng-show="BC.aOutputSizesArr">
+				<div ng-repeat="aSize in BC.aOutputSizesArr" class="outputImg_blank" style="width:{{aSize}}px; height:{{aSize}}px; font-size:{{aSize-2}}px; line-height:{{aSize}}px;">
+					{{aSize}}
+				</div>
+			</span>
+		</div>
 		<br/>
 		<span ng-show="BC.aOptions_aBadge != '0'">
 			Source Badge Images:

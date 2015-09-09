@@ -1,7 +1,7 @@
 // all functions use this format for 
 // note for profilist, ill know the paths, so no need to select dir and use os.file to get contents for aBadgeSrcImgPathArr and aBaseSrcImgPathArr, i save them to a preset folder
 
-function returnIconset(aCreateType, aCreateName, aCreatePathDirArr) {
+function returnIconset(aCreateType, aCreateName, aCreatePathDirArr, aOutputSizesArr) {
 	// aCreateType - string. future plan to support things like tiff. in future maybe make this an arr, so can make multiple types in one shot.
 		// ico - can be done on any os
 		// linux - installation part is linux dependent
@@ -12,7 +12,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDirArr) {
 		// linux - array of theme names, if null, it will default to ['hicolor']
 	// aBaseSrcImgPathArr
 		// same across all os - os paths of images to be used as sources for bases, the sizes will be auto determined, if any of them are not square it will throw
-	// aIconSizes - sizes wanted in iconset
+	// aOutputSizesArr - sizes wanted in iconset
 		// win and linux - array of sizes wanted. so if just 1, will iconset will only include 1
 			// win recommendation: [16, 32, 48, 64, 256] // only vista uses 64, so can ommit that
 			// linux recommendation: [16, 24, 48, 96]

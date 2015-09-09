@@ -86,6 +86,40 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		
 		MODULE.aCreatePathDirArr = ['rawr','a'];
 		
+		MODULE.aOutputSizesType = 'Custom';
+		MODULE.aOutputSizesArr = [10, 20];
+		
+		MODULE.aOutputSizes_custStrToArr = function() {
+			try {
+				var split = MODULE.aOutputSizesCustomStr.split(',');
+				if (split.length == 0) {
+					return;
+				}
+				for (var i=0; i<split.length; i++) {
+					if (!split[i] || split[i] == '' || isNaN(split[i])) {
+						return;
+					}
+				}
+				MODULE.aOutputSizesArr = split;
+			} catch(ignore) {}
+		};
+		MODULE.onChangeOutputSizes = function() {
+			MODULE.aOutputSizesArr = [];
+			MODULE.aOutputSizesCustomStr = '';
+			switch (MODULE.aOutputSizesType) {
+				case 'Windows':
+					MODULE.aOutputSizesArr = [16, 24, 32, 48, 256];
+					break;
+				case 'Mac OS X':
+					MODULE.aOutputSizesArr = [16, 32, 64, 128, 256, 512, 1024];
+					break;
+				case 'Linux':
+					MODULE.aOutputSizesArr = [16, 24, 48, 96];
+					break;
+				default:
+					// do custom
+			}
+		};
 		MODULE.ifBadgeNoneUncheck = function() {
 			if (MODULE.aOptions_aBadge == '0') {
 				MODULE.ui_saveScaledBaseDir = undefined;
