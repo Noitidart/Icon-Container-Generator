@@ -62,10 +62,6 @@ self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransf
 };
 
 ////// end of imports and definitions
-function testWK() {
-	console.log('in testWK');
-	return 'wk';
-}
 function init(objCore) {
 	//console.log('in worker init');
 	
@@ -104,83 +100,38 @@ function init(objCore) {
 	
 	self.postMessage(['init']);
 	
-	setTimeout(function() {
-		self.postMessageWithCallback(['testMT'], function(aDataGot) {
-			console.log('back in worker cb with aDataGot:', aDataGot);
-		});
-	}, 5000)
+	// setTimeout(function() {
+		// self.postMessageWithCallback(['testMT'], function(aDataGot) {
+			// console.log('back in worker cb with aDataGot:', aDataGot);
+		// });
+	// }, 5000);
 }
 
 // Start - Addon Functionality
 
-function asyncMonitorMouse() {
-	// this will get copy eve mouse events and deliver it to main thread
-	switch (core.os.toolkit.indexOf('gtk') == 0 ? 'gtk' : core.os.name) {
-		case 'winnt':
-		case 'winmo':
-		case 'wince':
-				
-				var rid_js = new Array(1);
-				rid_js[0] = ostypes.TYPE.RAWINPUTDEVICE(1, 2, 0, null); // mouse
-				
-				/*
-				usUsagePage
-				1 for generic desktop controls
-				2 for simulation controls
-				3 for vr
-				4 for sport
-				5 for game
-				6 for generic device
-				7 for keyboard
-				8 for leds
-				9 button
-				*/
-				
-				/*
-				usUsage values when usUsagePage is 1
-				0 - undefined
-				1 - pointer
-				2 - mouse
-				3 - reserved
-				4 - joystick
-				5 - game pad
-				6 - keyboard
-				7 - keypad
-				8 - multi-axis controller
-				9 - Tablet PC controls
-				*/
-				
-				var rid_c = ostypes.TYPE.RAWINPUTDEVICE.array(rid_js.length)(rid_js);
-				var rez_registerDevices = ostypes.API('RegisterRawInputDevices')(rid_c, rid_js.length, ostypes.TYPE.RAWINPUTDEVICE.size);
-				console.info('rez_registerDevices:', rez_registerDevices.toString(), uneval(rez_registerDevices), cutils.jscGetDeepest(rez_registerDevices));
-				if (rez_registerDevices == false) {
-					console.error('Failed rez_registerDevices, winLastError:', ctypes.winLastError);
-					throw new Error({
-						name: 'os-api-error',
-						message: 'Failed rez_registerDevices, winLastError: "' + ctypes.winLastError + '" and rez_registerDevices: "' + rez_registerDevices.toString(),
-						winLastError: ctypes.winLastError
-					});
-				}
-				
-				
-				
-			break
-		case 'gtk':
-			
-				
-			
-			break;
-		case 'darwin':
-			
-				
-			
-			break;
-		default:
-			throw new Error({
-				name: 'addon-error',
-				message: 'Operating system, "' + OS.Constants.Sys.Name + '" is not supported'
-			});
+function returnIconset(aCreateType, aCreateName, aCreatePathDir, aOutputSizesArr, aOptions={}) {
+	// creates iconset
+	console.log('in worker returnIconset, arguments:', JSON.stringify(arguments));
+	
+	var aOptionsDefaults = {
+		
+	};
+	
+	// make sure no unknown/unsupported options were specified by devuser
+	for (var aOpt in aOptions) {
+		if (!(aOpt in aOptionsDefaults)) {
+			throw new Error('option name of ' + aOpt + ' was found in devuser aOptions object, this is an unsupported option');
+		}
 	}
+	
+	// set the undeclared options in aOptions to the default
+	for (var aOpt in aOptionsDefaults) {
+		if (!(aOpt in aOptions)) {
+			aOptions[aOpt] = aOptionsDefaults[aOpt];
+		}
+	}
+	
+	return '~~made iconset~~';
 }
 // End - Addon Functionality
 

@@ -145,12 +145,27 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	loadImagePathsAndSendBackBytedata: function(aImagePathArr, aWorkerCallbackFulfill, aWorkerCallbackReject) {
 		// aImagePathArr is an arrya of os paths to the images to load
 		// this will load the images, then draw to canvas, then get get image data, then get array buffer/Bytedata for each image, and transfer object back it to the worker
-	},
-	testMT: function() {
-		return 'ya';
 	}
 };
 
+var fsMsgListener = { // framescript msg listener
+	receiveMessage: function(aMsgEvent) {
+		var aMsgEventData = aMsgEvent.data;
+		console.log('bootstrap getting aMsgEventData:', aMsgEventData);
+		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
+		aMsgEventData.push(aMsgEvent);
+		bootstrap[aMsgEvent.data.shift()].apply(null, aMsgEventData);
+	}
+};
+
+function appFunc_generateFiles(argsForWorkerReturnIconset, aFrameScriptMessageEvent) {
+	console.log('in appFunc_generateFiles, arguments:', arguments);
+	argsForWorkerReturnIconset.splice(0, 0, 'returnIconset'); // add in func name for my style of postMessage
+	ICGenWorker.postMessageWithCallback(argsForWorkerReturnIconset, function(aIconset) {
+		console.log('returnIconset completed, aIconset:', aIconset);
+		aFrameScriptMessageEvent.target.messageManager.sendAsyncMessage(core.addon.id, ['generateFiles_response', aIconset]);
+	});
+}
 // END - Addon Functionalities
 
 function install() {}
@@ -195,7 +210,9 @@ function startup(aData, aReason) {
 	
 	// register about page
 	aboutFactory_iconcontainergenerator = new AboutFactory(AboutIconContainerGenerator);
-	
+
+	// register framescript listener
+	Services.mm.addMessageListener(core.addon.id, fsMsgListener);
 }
 
 function shutdown(aData, aReason) {
@@ -210,6 +227,9 @@ function shutdown(aData, aReason) {
 	console.error('should have terminated');
 	// an issue with this unload is that framescripts are left over, i want to destory them eventually
 	aboutFactory_iconcontainergenerator.unregister();
+	
+	// unregister framescript listener
+	Services.mm.removeMessageListener(core.addon.id, fsMsgListener);
 }
 
 // start - common helper functions

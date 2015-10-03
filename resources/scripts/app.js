@@ -10,6 +10,7 @@ Cu.import('resource://gre/modules/XPCOMUtils.jsm');
 // Globals
 const core = {
 	addon: {
+		id: 'Icon-Container-Generator@jetpack',
 		path: {
 			name: 'icon-container-generator',
 			locale: 'chrome://icon-container-generator/locale/'
@@ -20,6 +21,7 @@ const core = {
 var gAngScope;
 // var gAngInjector;
 const clientId = new Date().getTime();
+var gCFMM;
 
 // Lazy Imports
 const myServices = {};
@@ -115,6 +117,30 @@ function onPageReady() {
 	document.getElementById('dropTarget_badge').addEventListener('drop', handleDrop.bind(null, 'badge'), true);
 	document.getElementById('dropTarget_badge').addEventListener('dragover', handleDragOver, true);
 	
+}
+
+// framescript comm
+var bootstrapMsgListener = {
+	receiveMessage: function(aMsgEvent) {
+		console.log('framescript getting aMsgEvent:', aMsgEvent);
+		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
+		bootstrapCallbacks[aMsgEvent.data.shift()].apply(null, aMsgEvent.data);
+	}
+};
+
+var bootstrapCallbacks = {
+	generateFiles_response: function(aIconset) {
+		// bootstrap calls this after it runs the chromeworker returnIconset function
+		console.log('ok back in app.js after returnIconset complete, aIconset:', aIconset);
+		alert('ok back in app.js after returnIconset complete, aIconset: ' + aIconset);
+	}
+};
+// end - framescript comm
+
+function doOnBeforeUnload() {
+
+	contentMMFromContentWindow_Method2(window).removeMessageListener(core.addon.id, bootstrapMsgListener); // framescript comm
+
 }
 
 function onPageUnload() {
@@ -413,6 +439,12 @@ function generatePreviews() {
 
 function generateFiles() {
 	// send message to bootstrap with image paths
+	var aCreateType;
+	var aCreateName;
+	var aCreatePathDir;
+	var aOutputSizesArr;
+	var aOptions = {};
+	contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aOutputSizesArr, aOptions]])
 }
 
 // start - common helper functions
@@ -512,7 +544,19 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 			throw new Error('Unrecognized aScalingAlgo: ' + aScalingAlgo);
 	}
 }
+function contentMMFromContentWindow_Method2(aContentWindow) {
+	if (!gCFMM) {
+		gCFMM = aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+							  .getInterface(Ci.nsIDocShell)
+							  .QueryInterface(Ci.nsIInterfaceRequestor)
+							  .getInterface(Ci.nsIContentFrameMessageManager);
+	}
+	return gCFMM;
+
+}
 // end - common helper functions
 	
+contentMMFromContentWindow_Method2(window).addMessageListener(core.addon.id, bootstrapMsgListener); // framescript comm
 document.addEventListener('DOMContentLoaded', onPageReady, false);
 document.addEventListener('unload', onPageUnload, false);
+window.addEventListener('beforeunload', doOnBeforeUnload, false);
