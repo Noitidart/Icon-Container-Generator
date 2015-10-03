@@ -145,6 +145,10 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	loadImagePathsAndSendBackBytedata: function(aImagePathArr, aWorkerCallbackFulfill, aWorkerCallbackReject) {
 		// aImagePathArr is an arrya of os paths to the images to load
 		// this will load the images, then draw to canvas, then get get image data, then get array buffer/Bytedata for each image, and transfer object back it to the worker
+	},
+	testMT: function() {
+		console.log('in testMT on mainthread arguments:', arguments);
+		return ['arg1', 'and arg2'];
 	}
 };
 
@@ -186,9 +190,9 @@ function startup(aData, aReason) {
 		function(aVal) {
 			console.log('Fullfilled - promise_getICGenWorker - ', aVal);
 			// start - do stuff here - promise_getICGenWorker
-			// ICGenWorker.postMessageWithCallback(['testWK'], function(aDataGot) {
-				// console.log('in mt callback with aDataGot:', aDataGot);
-			// })
+			ICGenWorker.postMessageWithCallback(['testWK'], function() {
+				console.log('in mt callback with arguments:', arguments);
+			})
 			// end - do stuff here - promise_getICGenWorker
 		},
 		function(aReason) {
@@ -307,11 +311,10 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 				callbackPendingId = aMsgEventData.pop();
 			}
 			
+			var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
+			
 			if (callbackPendingId) {
-				var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()](aMsgEventData);
 				bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
-			} else {
-				aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
 			}
 		};
 		
@@ -332,9 +335,10 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		bootstrap[workerScopeName].postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
 			// lastCallbackId++; // link8888881
 			var thisCallbackId = SIC_CB_PREFIX + new Date().getTime(); // + lastCallbackId; // link8888881
-			aFuncExecScope[thisCallbackId] = function(dataSent) {
+			aFuncExecScope[thisCallbackId] = function() {
 				delete aFuncExecScope[thisCallbackId];
-				aCB(dataSent);
+				console.log('in mainthread callback trigger wrap, will apply aCB with these arguments:', arguments, 'turned into array:', Array.prototype.slice.call(arguments));
+				aCB.apply(null, arguments[0]);
 			};
 			aPostMessageArr.push(thisCallbackId);
 			console.log('aPostMessageArr:', aPostMessageArr);

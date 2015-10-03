@@ -16,7 +16,7 @@
 		<h2>Parameters</h2>
 		<label>
 			Output Type:
-			<select ng-model="BC.aCreateType" ng-change="" ng-options="aOptName for aOptName in ['ICNS', 'ICO', 'Linux Install']"/>
+			<select ng-model="BC.aCreateType" ng-change="" ng-options="aOptName for aOptName in ['ICNS', 'ICO', 'Linux']"/>
 		</label>
 		<br/>
 		<label>
@@ -134,6 +134,6 @@
 		</div>
 		<br/>
 		<input type="button" value="Generate Previews" style="display:block;" onclick="generatePreviews()"/>
-		<input type="button" value="Make Icon Container" style="display:block;" onclick="generateFiles()"/>
+		<input type="button" value="Make Icon Container" style="display:block;" ng-click="BC.generateFiles()"/>
 	</body>
 </html>

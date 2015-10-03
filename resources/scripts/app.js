@@ -122,17 +122,26 @@ function onPageReady() {
 // framescript comm
 var bootstrapMsgListener = {
 	receiveMessage: function(aMsgEvent) {
-		console.log('framescript getting aMsgEvent:', aMsgEvent);
+		var aMsgEventData = aMsgEvent.data;
+		console.log('framescript getting aMsgEvent:', aMsgEventData);
 		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
-		bootstrapCallbacks[aMsgEvent.data.shift()].apply(null, aMsgEvent.data);
+		bootstrapCallbacks[aMsgEventData.shift()].apply(null, aMsgEventData);
 	}
 };
 
 var bootstrapCallbacks = {
-	generateFiles_response: function(aIconset) {
+	generateFiles_response: function(aReturnObj) {
 		// bootstrap calls this after it runs the chromeworker returnIconset function
-		console.log('ok back in app.js after returnIconset complete, aIconset:', aIconset);
-		alert('ok back in app.js after returnIconset complete, aIconset: ' + aIconset);
+		console.log('ok back in app.js after returnIconset complete, aReturnObj:', aReturnObj);
+		if (aReturnObj.status == 'fail') {
+			alert('Icon container process failed with message: "' + aReturnObj.reason + '"')
+		} else {
+			if (aReturnObj.reason) {
+				alert('Succesfully completed proccessing with pmessage: "' + aReturnObj.reason + '"');
+			} else {
+				alert('Succesfully completed proccessing');
+			}
+		}
 	}
 };
 // end - framescript comm
@@ -301,6 +310,52 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			can.height = aSize;
 			fitTextOnCanvas(can, ctx, aSize, 'arial');
 		};
+		
+		MODULE.generateFiles = function() {
+			// send message to bootstrap with image paths
+			var aCreateType = MODULE.aCreateType;
+			var aCreateName = MODULE.aCreateName;
+			var aCreatePathDir = MODULE.aCreatePathDir;
+			var aBaseSrcImgPathArr = MODULE.aBaseSrcImgPathArr;
+			var aOutputSizesArr = MODULE.aOutputSizesArr;
+			
+			var aOptions = {};
+			/* defaults of aOptions
+			var aOptions = {
+				aBadge: 0,
+				aBadgeSrcImgPathArr: null,
+				aBadgeSizePerOutputSize: null,
+				saveScaledBadgeDir: null,
+				saveScaledBaseDir: null,
+				saveScaledIconDir: null,
+				dontMakeIconContainer: false
+			};
+			*/
+			aOptions.aScalingAlgo = parseInt(MODULE.aScalingAlgo);
+			
+			aOptions.aBadge = parseInt(MODULE.aOptions_aBadge);
+			if (aOptions.aBadge > 0) {
+				aOptions.aBadgeSrcImgPathArr = MODULE.aBadgeSrcImgPathArr;
+				aOptions.aBadgeSizePerOutputSize = MODULE.aBadgeSizePerOutputSize;
+				
+				if (MODULE.aOptions_saveScaledBadgeDir && MODULE.aOptions_saveScaledBadgeDir != '') {
+					aOptions.saveScaledBadgeDir = MODULE.aOptions_saveScaledBadgeDir;
+				}
+				
+				// as if user has set aBadge to 0, and they just want to save the base images, then they should just set saveScaledIconDir as base == icon as there is no badge
+				if (MODULE.aOptions_saveScaledBaseDir && MODULE.aOptions_saveScaledBaseDir != '') {
+					aOptions.saveScaledBaseDir = MODULE.aOptions_saveScaledBaseDir;
+				}
+			}
+
+			if (MODULE.aOptions_saveScaledIconDir && MODULE.aOptions_saveScaledIconDir != '') {
+				aOptions.saveScaledIconDir = MODULE.aOptions_saveScaledIconDir;
+			}
+
+			aOptions.dontMakeIconContainer = MODULE.aOptions_dontMakeIconContainer;
+			
+			contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions]]);
+		}
 	}]);
 	
 function generatePreviews() {
@@ -435,16 +490,6 @@ function generatePreviews() {
 			can.parentNode.removeAttribute('data-badge-scale-from');
 		}
 	}
-}
-
-function generateFiles() {
-	// send message to bootstrap with image paths
-	var aCreateType;
-	var aCreateName;
-	var aCreatePathDir;
-	var aOutputSizesArr;
-	var aOptions = {};
-	contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aOutputSizesArr, aOptions]])
 }
 
 // start - common helper functions

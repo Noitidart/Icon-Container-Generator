@@ -1,7 +1,7 @@
 // all functions use this format for 
 // note for profilist, ill know the paths, so no need to select dir and use os.file to get contents for aBadgeSrcImgPathArr and aBaseSrcImgPathArr, i save them to a preset folder
 
-function returnIconset(aCreateType, aCreateName, aCreatePathDir, aOutputSizesArr) {
+function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr) {
 	// aCreateType - string. future plan to support things like tiff. in future maybe make this an arr, so can make multiple types in one shot.
 		// ico - can be done on any os
 		// linux - installation part is linux dependent
