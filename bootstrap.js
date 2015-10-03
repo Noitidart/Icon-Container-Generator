@@ -165,9 +165,9 @@ var fsMsgListener = { // framescript msg listener
 function appFunc_generateFiles(argsForWorkerReturnIconset, aFrameScriptMessageEvent) {
 	console.log('in appFunc_generateFiles, arguments:', arguments);
 	argsForWorkerReturnIconset.splice(0, 0, 'returnIconset'); // add in func name for my style of postMessage
-	ICGenWorker.postMessageWithCallback(argsForWorkerReturnIconset, function(aIconset) {
-		console.log('returnIconset completed, aIconset:', aIconset);
-		aFrameScriptMessageEvent.target.messageManager.sendAsyncMessage(core.addon.id, ['generateFiles_response', aIconset]);
+	ICGenWorker.postMessageWithCallback(argsForWorkerReturnIconset, function(aStatusObj) {
+		console.log('returnIconset completed, aStatusObj:', aStatusObj);
+		aFrameScriptMessageEvent.target.messageManager.sendAsyncMessage(core.addon.id, ['generateFiles_response', aStatusObj]);
 	});
 }
 // END - Addon Functionalities

@@ -338,17 +338,17 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 				aOptions.aBadgeSrcImgPathArr = MODULE.aBadgeSrcImgPathArr;
 				aOptions.aBadgeSizePerOutputSize = MODULE.aBadgeSizePerOutputSize;
 				
-				if (MODULE.aOptions_saveScaledBadgeDir && MODULE.aOptions_saveScaledBadgeDir != '') {
+				if (MODULE.ui_saveScaledBadgeDir) {
 					aOptions.saveScaledBadgeDir = MODULE.aOptions_saveScaledBadgeDir;
 				}
 				
 				// as if user has set aBadge to 0, and they just want to save the base images, then they should just set saveScaledIconDir as base == icon as there is no badge
-				if (MODULE.aOptions_saveScaledBaseDir && MODULE.aOptions_saveScaledBaseDir != '') {
+				if (MODULE.ui_saveScaledBaseDir) {
 					aOptions.saveScaledBaseDir = MODULE.aOptions_saveScaledBaseDir;
 				}
 			}
 
-			if (MODULE.aOptions_saveScaledIconDir && MODULE.aOptions_saveScaledIconDir != '') {
+			if (MODULE.ui_saveScaledIconDir) {
 				aOptions.saveScaledIconDir = MODULE.aOptions_saveScaledIconDir;
 			}
 

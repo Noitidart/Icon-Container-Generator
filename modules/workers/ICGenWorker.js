@@ -47,11 +47,6 @@ self.onmessage = function(aMsgEvent) {
 	}
 };
 
-function testWK() {
-	console.log('in testWK');
-	return ['arg1', 'arg2'];
-}
-
 // set up postMessageWithCallback so chromeworker can send msg to mainthread to do something then return here. must return an array, thta array is arguments applied to callback
 self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
 	var aFuncExecScope = WORKER;
@@ -65,6 +60,11 @@ self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransf
 	aPostMessageArr.push(thisCallbackId);
 	self.postMessage(aPostMessageArr, aPostMessageTransferList);
 };
+
+function testWK() {
+	console.log('in testWK');
+	return ['arg1', 'arg2'];
+}
 
 ////// end of imports and definitions
 function init(objCore) {
@@ -157,10 +157,11 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		// 0 - jagged first - default
 		// 1 - blurry first
 		
-	// return value
-		// on linux it installs the pngs to the appropriate folders, returns a string name to use
-		// on windows it returns ico path
-		// on mac it returns an icns path
+	// return value - [aStatusObj, BLAH]
+		// BLAH is:
+			// on linux it installs the pngs to the appropriate folders, a string name to use, which will be same as aCreateName
+			// on windows it ico path
+			// on mac it an icns path
 	
 	// this function does what:
 		// windows: creates ico named aOptions.create_Name at given aOptions.create_OSPath
@@ -217,11 +218,11 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		case createTypeIcns:
 			
 				if (core.os.name != 'darwin') {
-					return {
+					return [{
 						status: 'fail',
 						reason: 'icns can only be created on mac operating system, and you are not on a mac',
 						reasonShort: 'wrong platform'
-					};
+					}];
 				}
 				
 			break;
@@ -233,56 +234,56 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		case createTypeLinux:
 			
 				if (core.os.name != 'linux') {
-					return {
+					return [{
 						status: 'fail',
 						reason: 'linux icon install can only be done on linux operating system, and you are not on a linux',
 						reasonShort: 'wrong platform'
-					};
+					}];
 				}
 				
 			break;
 		default:
 			// throw new Error('unrecognized aCreateType:' + aCreateType);
-			return {
+			return [{
 				status: 'fail',
 				reason: 'unrecognized aCreateType: ' + aCreateType
-			};
+			}];
 	}
 	
 	// ensure aCreateName is not blank, this function will handle making it os safe
 	if (!aCreateName || aCreateName == '') {
 			// throw new Error('aCreateName is blank');
-			return {
+			return [{
 				status: 'fail',
 				reason: 'aCreateName is blank'
-			};
+			}];
 	}
 	
 	// aBaseSrcImgPathArr check, need at least one
 	if (!aBaseSrcImgPathArr || !Array.isArray(aBaseSrcImgPathArr) || aBaseSrcImgPathArr.length == 0) {
 		// throw new Error('must provide at least one BASE image');
-		return {
+		return [{
 			status: 'fail',
 			reason: 'must provide at least one BASE image'
-		};
+		}];
 	}
 	
 	// aOutputSizesArr check, need at least one
 	if (!aOutputSizesArr || !Array.isArray(aOutputSizesArr) || aOutputSizesArr.length == 0) {
 		// throw new Error('must provide at least one OUTPUT SIZE');
-		return {
+		return [{
 			status: 'fail',
 			reason: 'must provide at least one OUTPUT SIZE'
-		};
+		}];
 	}
 	
 	// validate aCreatePathDir
 	if (aCreateType == createTypeLinux) {
 		if (aCreatePathDir) {
-			return {
+			return [{
 				status: 'fail',
 				reason: 'for "Linux Intall" you cannot specify aCreatePathDir as the directories are automatically discovered'
-			};
+			}];
 		}
 		// :todo: turn aCreatePathDir into an object with key being size (square of course) of final output icons, and paths to the respective system folder to output the png's/svg to
 		// :todo; offer aOption.sudoPassword if they do that then i should write to root/share/icons. but for now and default is to write to user_home/share/icons FOR NON-QT so meaning for gtk
@@ -292,24 +293,136 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		} else {
 			// its QT
 			throw new Error('qt linux not yet supported, only support gtk systems as of now')
-			return {
+			return [{
 				status: 'fail',
 				reason: 'qt linux not yet supported, only support gtk systems as of now',
 				reasonShort: 'unsupported platform'
-			};
+			}];
 		}
 	} else {
 		if (!aCreatePathDir || aCreatePathDir == '') {
-			return {
+			return [{
 				status: 'fail',
 				reason: 'must provide a directory in which to output the icon container'
-			};
+			}];
 		}
+	}
+	
+	// validate dontMakeIconContainer
+	if (aOptions.dontMakeIconContainer) {
+		if (!aOptions.saveScaledBadgeDir && !aOptions.saveScaledBaseDir && !aOptions.saveScaledIconDir) {
+			// throw new Error();
+			return [{
+				status: 'fail',
+				reason: 'devuser specified not to create icon container, SO then MUST specify o save the scaled as pngs to a directory, otherwise its pointless calling this function'
+			}];
+		}
+	}
+	
+	// ensure the output sizes are parseInt'ed
+	for (var i=0; i<aOutputSizesArr.length; i++) {
+		aOutputSizesArr[i] = parseInt(aOutputSizesArr[i]);
+	}
+	
+	// with respect to badge now
+	if (aOptions.aBadge != 0) {
+		// make sure aBadge is right
+		if (aOptions.aBadge < 0 || aOptions.aBadge > 4) {
+			// throw new Error();
+			return [{
+				status: 'fail',
+				reason: 'aOptions.aBadge must be 0, 1, 2, 3, or 4'
+			}];
+		}
+		
+		// aBadgeSrcImgPathArr check, need at least one
+		if (!aOptions.aBadgeSrcImgPathArr || !Array.isArray(aOptions.aBadgeSrcImgPathArr) || aOptions.aBadgeSrcImgPathArr.length == 0) {
+			// throw new Error('must provide at least one Badge image');
+			return [{
+				status: 'fail',
+				reason: 'must provide at least one BADGE image as devuser specified aBadge not to be 0, meaning he wants a badge'
+			}];
+		}
+		
+		// ensure aBadgeSizePerOutputSize is an object, and all sizes from aOutputSizesArr are found in here as keys
+		if (!aOptions.aBadgeSizePerOutputSize || typeof aOptions.aBadgeSizePerOutputSize !== 'object') {
+			return [{
+				status: 'fail',
+				reason: 'as devuser wants a badge, you must specify aOptions.aBadgeSizePerOutputSize as a key value pair, with keys being all the sizes found in aOutputSizesArr'
+			}];
+		}
+		// ensure all sizes in aOutputSizesArr are in aOptions.aBadgeSizePerOutputSize
+		for (var i=0; i<aOutputSizesArr.length; i++) {
+			if (!(aOutputSizesArr[i] in aOptions.aBadgeSizePerOutputSize)) {
+				return [{
+					status: 'fail',
+					reason: 'aOutputSizesArr contains an icon size of "' + aOutputSizesArr[i] + '" HOWEVER this size was not found in your aOptions.aBadgeSizePerOutputSize, you must include it! and make sure to give it a decimal (ratio) between > 0 and <1 or a px size > 1'
+				}];
+			}
+		}
+		// ensure there are no extras in aOptions.aBadgeSizePerOutputSize
+		// also ensures that the values are parseFloat'ed
+		for (var aOutputSize in aOptions.aBadgeSizePerOutputSize) {
+			if (aOutputSizesArr.indexOf(parseInt(aOutputSize)) == -1) {
+				return [{
+					status: 'fail',
+					reason: 'aOptions.aBadgeSizePerOutputSize contains an icon size of "' + aOutputSize + '" HOWEVER this size was not found in your aOutputSizesArr, you must either include this size in aOutputSizesArr or exclude it from aOptions.aBadgeSizePerOutputSize'
+				}];
+			}
+			aOutputSizesArr[aOutputSize] = parseFloat(aOutputSizesArr[aOutputSize]);
+		}
+		
+		// make sure saveScaledBaseDir is not blank if its set
+		if (aOptions.saveScaledBaseDir === '') {
+			// throw new Error();
+			return [{
+				status: 'fail',
+				reason: 'aOptions.saveScaledBaseDir cannot be a blank string'
+			}];
+		}
+		
+		// make sure saveScaledBadgeDir is not blank if its set
+		if (aOptions.saveScaledBadgeDir === '') {
+			// throw new Error();
+			return [{
+				status: 'fail',
+				reason: 'aOptions.saveScaledBadgeDir cannot be a blank string'
+			}];
+		}
+	} else {
+		// aBadge is 0
+		
+		// will not do any scaling of badges so cannot
+		if (aOptions.saveScaledBadgeDir) {
+			// throw new Error();
+			return [{
+				status: 'fail',
+				reason: 'aOptions.aBadge is 0, but devuser is asking to save scaled badges, this is not possible, devuser is an idiot'
+			}];
+		}
+		
+		// base == icon, devuser should do saveScaledIconDir instead of doing saveScaledBaseDir
+		if (aOptions.saveScaledBaseDir) {
+			// throw new Error();
+			return [{
+				status: 'fail',
+				reason: 'aOptions.aBadge is 0, so there is no badge just a base, and devuser is asking to save scaled bases, just mark saveScaledIconDir, as icon==base, not so ridiculous but im making that clear to you now'
+			}];
+		}
+	}
+	
+	// make sure saveScaledIconDir is not blank if its set
+	if (aOptions.saveScaledIconDir === '') {
+		// throw new Error();
+		return [{
+			status: 'fail',
+			reason: 'aOptions.saveScaledIconDir cannot be a blank string'
+		}];
 	}
 	
 	// end - validation of args 
 	
-	return {status:'ok', reason:'~~made iconset~~'};
+	return [{status:'ok', reason:'~~made iconset~~'}];
 }
 // End - Addon Functionality
 
