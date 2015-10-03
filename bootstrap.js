@@ -145,6 +145,9 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	loadImagePathsAndSendBackBytedata: function(aImagePathArr, aWorkerCallbackFulfill, aWorkerCallbackReject) {
 		// aImagePathArr is an arrya of os paths to the images to load
 		// this will load the images, then draw to canvas, then get get image data, then get array buffer/Bytedata for each image, and transfer object back it to the worker
+	},
+	testMT: function() {
+		return 'ya';
 	}
 };
 
@@ -168,6 +171,9 @@ function startup(aData, aReason) {
 		function(aVal) {
 			console.log('Fullfilled - promise_getICGenWorker - ', aVal);
 			// start - do stuff here - promise_getICGenWorker
+			// ICGenWorker.postMessageWithCallback(['testWK'], function(aDataGot) {
+				// console.log('in mt callback with aDataGot:', aDataGot);
+			// })
 			// end - do stuff here - promise_getICGenWorker
 		},
 		function(aReason) {
@@ -251,7 +257,7 @@ function Deferred() {
 	}
 }
 
-const SIC_CB_PREFIX = '_a_gen_cb_';
+const SIC_CB_PREFIX = '_a_gen_cb_'; //  v10/3/15
 function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core) {
 	// creates a global variable in bootstrap named workerScopeName which will hold worker, do not set up a global for it like var Blah; as then this will think something exists there
 	// aScope is the scope in which the functions are to be executed
@@ -273,7 +279,20 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		var afterInitListener = function(aMsgEvent) {
 			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 			var aMsgEventData = aMsgEvent.data;
-			aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
+			console.log('mainthread receiving message:', aMsgEventData);
+			
+			// postMessageWithCallback from worker to mt. so worker can setup callbacks after having mt do some work
+			var callbackPendingId;
+			if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
+				callbackPendingId = aMsgEventData.pop();
+			}
+			
+			if (callbackPendingId) {
+				var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()](aMsgEventData);
+				bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
+			} else {
+				aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
+			}
 		};
 		
 		var beforeInitListener = function(aMsgEvent) {
@@ -290,14 +309,15 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		};
 		
 		// var lastCallbackId = -1; // dont do this, in case multi SICWorker's are sharing the same aFuncExecScope so now using new Date().getTime() in its place // link8888881
-		bootstrap[workerScopeName].postMessageWithCallback = function(aPostMessageArr, aPostMessageTransferList, aCB) {
+		bootstrap[workerScopeName].postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
 			// lastCallbackId++; // link8888881
 			var thisCallbackId = SIC_CB_PREFIX + new Date().getTime(); // + lastCallbackId; // link8888881
-			aFuncExecScope[thisCallbackId] = function() {
+			aFuncExecScope[thisCallbackId] = function(dataSent) {
 				delete aFuncExecScope[thisCallbackId];
-				aCB();
+				aCB(dataSent);
 			};
 			aPostMessageArr.push(thisCallbackId);
+			console.log('aPostMessageArr:', aPostMessageArr);
 			bootstrap[workerScopeName].postMessage(aPostMessageArr, aPostMessageTransferList);
 		};
 		

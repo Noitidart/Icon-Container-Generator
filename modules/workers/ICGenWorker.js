@@ -24,7 +24,7 @@ var OSStuff = {}; // global vars populated by init, based on OS
 importScripts(core.addon.path.content + 'modules/cutils.jsm');
 importScripts(core.addon.path.content + 'modules/ctypes_math.jsm');
 
-// Setup SICWorker
+// Setup SICWorker - 10/3/15
 // instructions on using SICWorker
 	// to call a function in the main thread function scope (which was determiend on SICWorker call from mainthread) from worker, so self.postMessage with array, with first element being the name of the function to call in mainthread, and the reamining being the arguments
 	// the return value of the functions here, will be sent to the callback, IF, worker did worker.postWithCallback
@@ -33,21 +33,39 @@ self.onmessage = function(aMsgEvent) {
 	// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 	var aMsgEventData = aMsgEvent.data;
 	
-	console.log('worker receiving msg:', aMsgEvent);
+	console.log('worker receiving msg:', aMsgEventData);
+	
 	var callbackPendingId;
-	if (typeof aMsgEventData[aMsgEventData.length-1] == 'String' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
+	if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
 		callbackPendingId = aMsgEventData.pop();
 	}
 	
-	var rez_worker_call = WORKER[aMsgEventData.shift()].apply(null, aMsgEventData);
-	
 	if (callbackPendingId) {
+		var rez_worker_call = WORKER[aMsgEventData.shift()](aMsgEventData);
 		self.postMessage([callbackPendingId, rez_worker_call]);
+	} else {
+		WORKER[aMsgEventData.shift()].apply(null, aMsgEventData);
 	}
 };
 
-////// end of imports and definitions
+// set up postMessageWithCallback so chromeworker can send msg to mainthread to do something then return here
+self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
+	var aFuncExecScope = WORKER;
+	
+	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
+	aFuncExecScope[thisCallbackId] = function(dataSent) {
+		delete aFuncExecScope[thisCallbackId];
+		aCB(dataSent);
+	};
+	aPostMessageArr.push(thisCallbackId);
+	self.postMessage(aPostMessageArr, aPostMessageTransferList);
+};
 
+////// end of imports and definitions
+function testWK() {
+	console.log('in testWK');
+	return 'wk';
+}
 function init(objCore) {
 	//console.log('in worker init');
 	
@@ -85,6 +103,12 @@ function init(objCore) {
 	console.log('init worker done');
 	
 	self.postMessage(['init']);
+	
+	setTimeout(function() {
+		self.postMessageWithCallback(['testMT'], function(aDataGot) {
+			console.log('back in worker cb with aDataGot:', aDataGot);
+		});
+	}, 5000)
 }
 
 // Start - Addon Functionality
