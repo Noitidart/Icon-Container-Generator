@@ -42,25 +42,26 @@ self.onmessage = function(aMsgEvent) {
 		callbackPendingId = aMsgEventData.pop();
 	}
 	
-	var rez_worker_call = WORKER[aMsgEventData.shift()].apply(null, aMsgEventData);
-	
 	if (callbackPendingId) {
-		console.log('yes had callbackPendingId of', callbackPendingId, 'so postMessage back with value of:', rez_worker_call);
+		var rez_worker_call = WORKER[aMsgEventData.shift()](aMsgEventData);
 		self.postMessage([callbackPendingId, rez_worker_call]);
+	} else {
+		WORKER[aMsgEventData.shift()].apply(null, aMsgEventData);
 	}
 };
 
 // set up postMessageWithCallback so chromeworker can send msg to mainthread to do something then return here
 self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
-	aFuncExecScope = WORKER;
+	console.log('in postMessageWithCallback on worker');
+	var aFuncExecScope = WORKER;
 	
 	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
-	aFuncExecScope[thisCallbackId] = function() {
+	aFuncExecScope[thisCallbackId] = function(dataSent) {
 		delete aFuncExecScope[thisCallbackId];
-		aCB();
+		aCB(dataSent);
 	};
 	aPostMessageArr.push(thisCallbackId);
-	bootstrap[workerScopeName].postMessage(aPostMessageArr, aPostMessageTransferList);
+	self.postMessage(aPostMessageArr, aPostMessageTransferList);
 };
 
 ////// end of imports and definitions
@@ -131,6 +132,12 @@ function init(objCore) {
 		gConvert.promises = [];
 		self.postMessage(['init']);
 	});
+	
+	setTimeout(function() {
+		self.postMessageWithCallback(['testWK'], function(aDataSentByMT) {
+			console.log('ok back in worker callback with aDataSentByMT:', aDataSentByMT);
+		})
+	}, 5000);
 }
 
 // Start - Addon Functionality

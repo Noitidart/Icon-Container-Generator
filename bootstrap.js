@@ -145,6 +145,10 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	loadImagePathsAndSendBackBytedata: function(aImagePathArr, aWorkerCallbackFulfill, aWorkerCallbackReject) {
 		// aImagePathArr is an arrya of os paths to the images to load
 		// this will load the images, then draw to canvas, then get get image data, then get array buffer/Bytedata for each image, and transfer object back it to the worker
+	},
+	testWK: function() {
+		console.log('ok running testWK');
+		return 'joop';
 	}
 };
 
@@ -168,9 +172,9 @@ function startup(aData, aReason) {
 		function(aVal) {
 			console.log('Fullfilled - promise_getICGenWorker - ', aVal);
 			// start - do stuff here - promise_getICGenWorker
-			ICGenWorker.postMessageWithCallback(['testMT'], function(aVar) {
-				console.log('back in bootstrap with aVar:', aVar);
-			})
+			// ICGenWorker.postMessageWithCallback(['testMT'], function(aVar) {
+				// console.log('back in bootstrap with aVar:', aVar);
+			// })
 			// end - do stuff here - promise_getICGenWorker
 		},
 		function(aReason) {
@@ -276,6 +280,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		var afterInitListener = function(aMsgEvent) {
 			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 			var aMsgEventData = aMsgEvent.data;
+			console.log('mainthread receiving message:', aMsgEventData);
 			
 			// postMessageWithCallback from worker to mt. so worker can setup callbacks after having mt do some work
 			var callbackPendingId;
@@ -285,9 +290,9 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 			
 			if (callbackPendingId) {
 				var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()](aMsgEventData);
-				self.postMessage([callbackPendingId, rez_mainthread_call]);
+				bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
 			} else {
-				var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
+				aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
 			}
 		};
 		
