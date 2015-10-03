@@ -35,17 +35,32 @@ self.onmessage = function(aMsgEvent) {
 	// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 	var aMsgEventData = aMsgEvent.data;
 	
-	console.log('worker receiving msg:', aMsgEvent);
+	console.log('worker receiving msg:', aMsgEventData);
+	
 	var callbackPendingId;
-	if (typeof aMsgEventData[aMsgEventData.length-1] == 'String' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
+	if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
 		callbackPendingId = aMsgEventData.pop();
 	}
 	
 	var rez_worker_call = WORKER[aMsgEventData.shift()].apply(null, aMsgEventData);
 	
 	if (callbackPendingId) {
+		console.log('yes had callbackPendingId of', callbackPendingId, 'so postMessage back with value of:', rez_worker_call);
 		self.postMessage([callbackPendingId, rez_worker_call]);
 	}
+};
+
+// set up postMessageWithCallback so chromeworker can send msg to mainthread to do something then return here
+self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
+	aFuncExecScope = WORKER;
+	
+	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
+	aFuncExecScope[thisCallbackId] = function() {
+		delete aFuncExecScope[thisCallbackId];
+		aCB();
+	};
+	aPostMessageArr.push(thisCallbackId);
+	bootstrap[workerScopeName].postMessage(aPostMessageArr, aPostMessageTransferList);
 };
 
 ////// end of imports and definitions
@@ -54,6 +69,11 @@ self.onclose = function(event) {
 	console.error('got msg to terminate worker - going to terminate gConvert worker');
 	gConvert.worker.terminate();
 	console.error('ok terminated gConvert worker');
+}
+
+function testMT() {
+	console.log('calling testMT in worker');
+	return 'rawr';
 }
 
 function init(objCore) {
@@ -108,6 +128,7 @@ function init(objCore) {
 
 	gConvert.allDone().then(function() {
 		console.log('gConvert complete');
+		gConvert.promises = [];
 		self.postMessage(['init']);
 	});
 }
@@ -206,30 +227,24 @@ function makeIconContainer(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImg
 	// go through aBaseSrcImgPathArr and aBadgeSrcImgPathArr
 	// :todo: check if paths are duplicates
 	for (var i=0; i<aBaseSrcImgPathArr.length; i++) {
-		var dotExt = ''; //aBaseSrcImgPathArr[i].substr(aBaseSrcImgPathArr[i].lastIndexOf('.'));
-		console.log('adding url:', aBaseSrcImgPathArr[i].toLowerCase().substr(0, 9) == 'chrome://' ? aBaseSrcImgPathArr[i] : OS.Path.toFileURI(aBaseSrcImgPathArr[i]), '/base' + i + dotExt);
-		gConvert.addUrl(aBaseSrcImgPathArr[i].toLowerCase().substr(0, 9) == 'chrome://' ? aBaseSrcImgPathArr[i] : OS.Path.toFileURI(aBaseSrcImgPathArr[i]), '/base' + i + dotExt); // note: assuming either chrome:// or file:// uri, does not handle http:// etc
+		gConvert.addUrl(aBaseSrcImgPathArr[i].toLowerCase().substr(0, 9) == 'chrome://' ? aBaseSrcImgPathArr[i] : OS.Path.toFileURI(aBaseSrcImgPathArr[i]), '/base' + i); // note: assuming either chrome:// or file:// uri, does not handle http:// etc
 	}
 	if (aOptions.aBadge) {
 		for (var i=0; i<aOptions.aBadgeSrcImgPathArr.length; i++) {
-			var dotExt = ''; //aBaseSrcImgPathArr[i].substr(aBaseSrcImgPathArr[i].lastIndexOf('.'));
-			gConvert.addUrl(aOptions.aBadgeSrcImgPathArr[i].toLowerCase().substr(0, 9) == 'chrome://' ? aOptions.aBadgeSrcImgPathArr[i] : OS.Path.toFileURI(aBaseSrcImgPathArr[i]), '/badge' + i + dotExt);
+			gConvert.addUrl(aOptions.aBadgeSrcImgPathArr[i].toLowerCase().substr(0, 9) == 'chrome://' ? aOptions.aBadgeSrcImgPathArr[i] : OS.Path.toFileURI(aBaseSrcImgPathArr[i]), '/badge' + i);
 		}
 	}
 
 	gConvert.allDone().then(function() {
-		/*
-		gConvert.run('-rotate', '90', '/Image-Box-64.png', '/Image-Box-64-rot90.png').then(function() {
-			gConvert.getFile('Image-Box-64-rot90.png').then(function(real_contents) {
-				console.log('real_contents:', real_contents);
-				OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-TAT.png'), new Uint8Array(real_contents.buf), { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'Image-Box-64-rot-jpeg.txt.tmp') });
-			});
-		});
-		*/
-			gConvert.getFileArrBuf('base0').then(function(real_contents) {
-				console.log('real_contents:', real_contents);
+		gConvert.promises = [];
+		// gConvert.run('-rotate', '90', 'base0', 'base0-rot90.png').then(function() {
+		gConvert.run('base0').then(function() {
+			// gConvert.getFileArrBuf('base0-rot90.png').then(function(real_contents) {
+			gConvert.getFileArrBuf('base0-rot90.png').then(function(real_contents) {
+				// console.log('real_contents:', real_contents.buf.byteLength);
 				OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'base0.png'), new Uint8Array(real_contents.buf), { tmpPath: OS.Path.join(OS.Constants.Path.desktopDir, 'base0.png.tmp') });
 			});
+		});
 	});
 }
 // End - Addon Functionality

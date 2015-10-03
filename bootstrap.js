@@ -168,6 +168,9 @@ function startup(aData, aReason) {
 		function(aVal) {
 			console.log('Fullfilled - promise_getICGenWorker - ', aVal);
 			// start - do stuff here - promise_getICGenWorker
+			ICGenWorker.postMessageWithCallback(['testMT'], function(aVar) {
+				console.log('back in bootstrap with aVar:', aVar);
+			})
 			// end - do stuff here - promise_getICGenWorker
 		},
 		function(aReason) {
@@ -273,7 +276,19 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		var afterInitListener = function(aMsgEvent) {
 			// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 			var aMsgEventData = aMsgEvent.data;
-			aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
+			
+			// postMessageWithCallback from worker to mt. so worker can setup callbacks after having mt do some work
+			var callbackPendingId;
+			if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
+				callbackPendingId = aMsgEventData.pop();
+			}
+			
+			if (callbackPendingId) {
+				var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()](aMsgEventData);
+				self.postMessage([callbackPendingId, rez_mainthread_call]);
+			} else {
+				var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
+			}
 		};
 		
 		var beforeInitListener = function(aMsgEvent) {
@@ -290,14 +305,15 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		};
 		
 		// var lastCallbackId = -1; // dont do this, in case multi SICWorker's are sharing the same aFuncExecScope so now using new Date().getTime() in its place // link8888881
-		bootstrap[workerScopeName].postMessageWithCallback = function(aPostMessageArr, aPostMessageTransferList, aCB) {
+		bootstrap[workerScopeName].postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
 			// lastCallbackId++; // link8888881
 			var thisCallbackId = SIC_CB_PREFIX + new Date().getTime(); // + lastCallbackId; // link8888881
-			aFuncExecScope[thisCallbackId] = function() {
+			aFuncExecScope[thisCallbackId] = function(dataSent) {
 				delete aFuncExecScope[thisCallbackId];
-				aCB();
+				aCB(dataSent);
 			};
 			aPostMessageArr.push(thisCallbackId);
+			console.log('aPostMessageArr:', aPostMessageArr);
 			bootstrap[workerScopeName].postMessage(aPostMessageArr, aPostMessageTransferList);
 		};
 		
