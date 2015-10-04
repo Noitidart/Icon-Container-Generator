@@ -285,9 +285,8 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				reason: 'for "Linux Intall" you cannot specify aCreatePathDir as the directories are automatically discovered'
 			}];
 		}
-		// :todo: turn aCreatePathDir into an object with key being size (square of course) of final output icons, and paths to the respective system folder to output the png's/svg to
-		// :todo; offer aOption.sudoPassword if they do that then i should write to root/share/icons. but for now and default is to write to user_home/share/icons FOR NON-QT so meaning for gtk
 		aCreatePathDir = {};
+		// just platform check here, as this is validation section, i dont fill in the directories here for linux, but i did make aCreatePathDir an object
 		if (core.os.toolkit.indexOf('gtk') == 0) {
 			
 		} else {
@@ -420,7 +419,42 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		}];
 	}
 	
-	// end - validation of args 
+	// end - validation of args // ok so in validation things that should have been numbers have been parseInt'ed and floats parseFloat'ed lets now start processing
+	
+	// start processing - this strategy will use callbacks on worker to get mainthread to do canvas stuff, but this strategy is designed with a future of workers having canvas
+	
+	// send message to mainthread for each image path, mainthread should load it into an <img> and then send back arraybuffer, with height and width. or if onabort or onerror of image load it should tell us why. but leave the checking for square and etc to chromeworker after it receives it
+		// mainthread will create <img> then after load create canvas, then getImageData, then transfer back arrbuf with height and width
+		
+	// on receive of arrbuf, height, width, error (arrbuf should be transfered back)
+		// if error cancel whole process
+		// check if square
+		// all tests pass then put base datas into base object. and badge datas into badge object, with key being size
+	
+	// go through all base arrbufs and badge arrbufs, check if we have the size needed for final output, if not, then for each that we need, send message to mainthread with the arrbuf, and width and height needed (i should calc here the width and height needed based on aOptions.aScalingAlgo) ---- mainthread will make an imagedata out of it, it will make a canvas, then it will draw to it, then send back the arrbuf - and it will clean up everything on mainthread side memorywise
+	
+	// check if aOptions.saveScaledBadgeDir and aOptions.saveScaledBaseDir are set, if they are then save them to directories
+	
+	// if badge is needed, the base and badges were already sized so just pick the one needed and send to mainthread, tell it where to place the badge on base ----- mainthread will badge it, then send back arrbuf
+	
+	// if aOptions.saveScaledIconDir then save them
+	
+	// if aOptions.dontMakeIconContainer is true, then quit with message success
+	// else if aOptions.dontMakeIconContainer is false then
+		// do ICNS, ICO, Linux specific stuff
+	
+	///////////////
+	if (aCreateType == createTypeLinux) {
+		// :todo: turn aCreatePathDir into an object with key being size (square of course) of final output icons, and paths to the respective system folder to output the png's/svg to
+		// :todo; offer aOption.sudoPassword if they do that then i should write to root/share/icons. but for now and default is to write to user_home/share/icons FOR NON-QT so meaning for gtk
+		// aCreatePathDir = {}; // already made into an object in validation section above
+		if (core.os.toolkit.indexOf('gtk') == 0) {
+			// populate aCreatePathDir, which is now an object, with key of icon size, and value of path to write it in
+		} else {
+			// its QT
+			// not yet supported, validation section above will throw
+		}
+	}
 	
 	return [{status:'ok', reason:'~~made iconset~~'}];
 }
