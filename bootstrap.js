@@ -148,7 +148,24 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	},
 	testMT: function() {
 		console.log('in testMT on mainthread arguments:', arguments);
-		return ['arg1', 'and arg2'];
+		// start return sync test
+		// return ['arg1', 'and arg2'];
+		// start returning promise test
+		var mainDeferred_testMT = new Deferred();
+		
+		var aTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
+		aTimer.initWithCallback({
+			notify: function() {
+				console.log('timer up will resolve deferred');
+				mainDeferred_testMT.resolve(['resolved arg1', 'and resolved arg2'])
+			}
+		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+		
+		return mainDeferred_testMT.promise;
+	},
+	loadImgGetImgData: function(aImgPath) {
+		// aImgPath must be http or file uri NOT os path
+		
 	}
 };
 
@@ -314,7 +331,19 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 			var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
 			
 			if (callbackPendingId) {
-				bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
+				if (rez_mainthread_call.constructor.name == 'Promise') {
+					rez_mainthread_call.then(
+						function(aVal) {
+							bootstrap[workerScopeName].postMessage([callbackPendingId, aVal]);
+						},
+						function(aReason) {
+							bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+						}
+					);
+				} else {
+					// assume array
+					bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
+				}
 			}
 		};
 		

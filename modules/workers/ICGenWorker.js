@@ -3,6 +3,8 @@
 // Imports
 importScripts('resource://gre/modules/osfile.jsm');
 importScripts('resource://gre/modules/workers/require.js');
+// var child_process = require('sdk/system/child_process');
+// console.error('child_process:', child_process);
 
 // Globals
 var core = { // have to set up the main keys that you want when aCore is merged from mainthread in init
@@ -43,7 +45,19 @@ self.onmessage = function(aMsgEvent) {
 	var rez_worker_call = WORKER[aMsgEventData.shift()].apply(null, aMsgEventData);
 	
 	if (callbackPendingId) {
-		self.postMessage([callbackPendingId, rez_worker_call]);
+		if (rez_worker_call.constructor.name == 'Promise') {
+			rez_worker_call.then(
+				function(aVal) {
+					self.postMessage([callbackPendingId, aVal]);
+				},
+				function(aReason) {
+					self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+				}
+			);
+		} else {
+			// assume array
+			self.postMessage([callbackPendingId, rez_worker_call]);
+		}
 	}
 };
 
@@ -63,7 +77,17 @@ self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransf
 
 function testWK() {
 	console.log('in testWK');
-	return ['arg1', 'arg2'];
+	// start return sync test
+	// return ['arg1', 'arg2'];
+	// start returning promise test
+	var mainDeferred_testWK = new Deferred();
+	
+	setTimeout(function() {
+		console.log('timer up will resolve deferred');
+		mainDeferred_testWK.resolve(['resd arg1', 'resd arg2']);
+	}, 1000);
+	
+	return mainDeferred_testWK.promise;
 }
 
 ////// end of imports and definitions
@@ -462,6 +486,38 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 
 
 // Start - Common Functions
+function Deferred() {
+	try {
+		/* A method to resolve the associated Promise with the value passed.
+		 * If the promise is already settled it does nothing.
+		 *
+		 * @param {anything} value : This value is used to resolve the promise
+		 * If the value is a Promise then the associated promise assumes the state
+		 * of Promise passed as value.
+		 */
+		this.resolve = null;
 
+		/* A method to reject the assocaited Promise with the value passed.
+		 * If the promise is already settled it does nothing.
+		 *
+		 * @param {anything} reason: The reason for the rejection of the Promise.
+		 * Generally its an Error object. If however a Promise is passed, then the Promise
+		 * itself will be the reason for rejection no matter the state of the Promise.
+		 */
+		this.reject = null;
+
+		/* A newly created Pomise object.
+		 * Initially in pending state.
+		 */
+		this.promise = new Promise(function(resolve, reject) {
+			this.resolve = resolve;
+			this.reject = reject;
+		}.bind(this));
+		Object.freeze(this);
+	} catch (ex) {
+		console.error('Promise not available!', ex);
+		throw new Error('Promise not available!');
+	}
+}
 
 // End - Common Functions
