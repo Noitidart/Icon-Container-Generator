@@ -354,7 +354,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 
 			aOptions.dontMakeIconContainer = MODULE.aOptions_dontMakeIconContainer;
 			
-			contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions]]);
+			contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions]]); // this will callback into generateFiles_response
 		}
 	}]);
 	

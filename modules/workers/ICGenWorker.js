@@ -26,7 +26,7 @@ var OSStuff = {}; // global vars populated by init, based on OS
 importScripts(core.addon.path.content + 'modules/cutils.jsm');
 importScripts(core.addon.path.content + 'modules/ctypes_math.jsm');
 
-// Setup SICWorker - 10/3/15
+// Setup SICWorker - rev6
 // instructions on using SICWorker
 	// to call a function in the main thread function scope (which was determiend on SICWorker call from mainthread) from worker, so self.postMessage with array, with first element being the name of the function to call in mainthread, and the reamining being the arguments
 	// the return value of the functions here, will be sent to the callback, IF, worker did worker.postWithCallback
@@ -51,6 +51,10 @@ self.onmessage = function(aMsgEvent) {
 					self.postMessage([callbackPendingId, aVal]);
 				},
 				function(aReason) {
+					self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+				}
+			).catch(
+				function(aCatch) {
 					self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
 				}
 			);
@@ -138,6 +142,7 @@ function init(objCore) {
 
 // Start - Addon Functionality
 
+var lastFrameworkerId = -1;
 function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions={}) {
 	console.log('in worker returnIconset, arguments:', JSON.stringify(arguments));
 	
@@ -446,41 +451,109 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	// end - validation of args // ok so in validation things that should have been numbers have been parseInt'ed and floats parseFloat'ed lets now start processing
 	
 	// start processing - this strategy will use callbacks on worker to get mainthread to do canvas stuff, but this strategy is designed with a future of workers having canvas
+	var deferredMain_returnIconset = new Deferred();
 	
-	// send message to mainthread for each image path, mainthread should load it into an <img> and then send back arraybuffer, with height and width. or if onabort or onerror of image load it should tell us why. but leave the checking for square and etc to chromeworker after it receives it
-		// mainthread will create <img> then after load create canvas, then getImageData, then transfer back arrbuf with height and width
+	// start - globals for steps
+	var fwId;
+	var destroyFrameworker; // step0 sets this to a function i call to clean up
+	// end - globals for steps
+	
+	var step0 = function() {
+		console.log('worker: step0');
+		// setup frameworker
+		lastFrameworkerId++;
+		fwId = lastFrameworkerId;
+		self.postMessageWithCallback(['setupFrameworker', fwId], step1);
+	};
+	
+	var step1 = function(msgFrom_fsReturnIconset_onPageReady) {
+		console.log('worker: step1');
+		console.log('msgFrom_fsReturnIconset_onPageReady:', msgFrom_fsReturnIconset_onPageReady);
+		self.postMessage(['destroyFrameworker', fwId]);
+		deferredMain_returnIconset.resolve([{
+			status: 'ok',
+			reason: 'temporary resolve for now'
+		}]);
+		return; // :debug;
+		// send message to mainthread for each image path, mainthread should load it into an <img> and then send back arraybuffer, with height and width. or if onabort or onerror of image load it should tell us why. but leave the checking for square and etc to chromeworker after it receives it
+			// mainthread will create <img> then after load create canvas, then getImageData, then transfer back arrbuf with height and width
+		var promiseAllArr_loadImgAndGetImgDatas = [];
 		
-	// on receive of arrbuf, height, width, error (arrbuf should be transfered back)
-		// if error cancel whole process
-		// check if square
-		// all tests pass then put base datas into base object. and badge datas into badge object, with key being size
+		
+		
+		var promiseAll_loadImgAndGetImgDatas = Promise.all(promiseAllArr_loadImgAndGetImgDatas);
+		promiseAll_loadImgAndGetImgDatas.then(
+			function(aVal) {
+				console.log('Fullfilled - promiseAll_loadImgAndGetImgDatas - ', aVal);
+				// start - do stuff here - promiseAll_loadImgAndGetImgDatas
+				// check image dimensions and push to obj
+				deferredMain_returnIconset.resolve([{
+					status: 'ok',
+					reason: 'temporary resolve for now'
+				}])
+				// end - do stuff here - promiseAll_loadImgAndGetImgDatas
+			},
+			function(aReason) {
+				var rejObj = {name:'promiseAll_loadImgAndGetImgDatas', aReason:aReason};
+				console.warn('Rejected - promiseAll_loadImgAndGetImgDatas - ', rejObj);
+				deferredMain_returnIconset.reject(rejObj);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promiseAll_loadImgAndGetImgDatas', aCaught:aCaught};
+				console.error('Caught - promiseAll_loadImgAndGetImgDatas - ', rejObj);
+				deferredMain_returnIconset.reject(rejObj);
+			}
+		);
+	};
 	
-	// go through all base arrbufs and badge arrbufs, check if we have the size needed for final output, if not, then for each that we need, send message to mainthread with the arrbuf, and width and height needed (i should calc here the width and height needed based on aOptions.aScalingAlgo) ---- mainthread will make an imagedata out of it, it will make a canvas, then it will draw to it, then send back the arrbuf - and it will clean up everything on mainthread side memorywise
+	var step2 = function() {
+		// on receive of arrbuf, height, width, error (arrbuf should be transfered back)
+			// if error cancel whole process
+			// check if square
+			// all tests pass then put base datas into base object. and badge datas into badge object, with key being size
+	};
 	
-	// check if aOptions.saveScaledBadgeDir and aOptions.saveScaledBaseDir are set, if they are then save them to directories
+	var step3 = function() {
+		// go through all base arrbufs and badge arrbufs, check if we have the size needed for final output, if not, then for each that we need, send message to mainthread with the arrbuf, and width and height needed (i should calc here the width and height needed based on aOptions.aScalingAlgo) ---- mainthread will make an imagedata out of it, it will make a canvas, then it will draw to it, then send back the arrbuf - and it will clean up everything on mainthread side memorywise
+	};
 	
-	// if badge is needed, the base and badges were already sized so just pick the one needed and send to mainthread, tell it where to place the badge on base ----- mainthread will badge it, then send back arrbuf
+	var step4 = function() {
+		// check if aOptions.saveScaledBadgeDir and aOptions.saveScaledBaseDir are set, if they are then save them to directories
+	};
 	
-	// if aOptions.saveScaledIconDir then save them
+	var step5 = function() {
+		// if badge is needed, the base and badges were already sized so just pick the one needed and send to mainthread, tell it where to place the badge on base ----- mainthread will badge it, then send back arrbuf
+	};
 	
-	// if aOptions.dontMakeIconContainer is true, then quit with message success
-	// else if aOptions.dontMakeIconContainer is false then
+	var step6 = function() {
+		// if aOptions.saveScaledIconDir then save them
+	};
+	
+	var step7 = function() {
+		// if aOptions.dontMakeIconContainer is true, then quit with message success
+		// else if aOptions.dontMakeIconContainer is false then
+			// do ICNS, ICO, Linux specific stuff
+	};
+	
+	var step8 = function() {
 		// do ICNS, ICO, Linux specific stuff
-	
-	///////////////
-	if (aCreateType == createTypeLinux) {
-		// :todo: turn aCreatePathDir into an object with key being size (square of course) of final output icons, and paths to the respective system folder to output the png's/svg to
-		// :todo; offer aOption.sudoPassword if they do that then i should write to root/share/icons. but for now and default is to write to user_home/share/icons FOR NON-QT so meaning for gtk
-		// aCreatePathDir = {}; // already made into an object in validation section above
-		if (core.os.toolkit.indexOf('gtk') == 0) {
-			// populate aCreatePathDir, which is now an object, with key of icon size, and value of path to write it in
-		} else {
-			// its QT
-			// not yet supported, validation section above will throw
+		if (aCreateType == createTypeLinux) {
+			// :todo: turn aCreatePathDir into an object with key being size (square of course) of final output icons, and paths to the respective system folder to output the png's/svg to
+			// :todo; offer aOption.sudoPassword if they do that then i should write to root/share/icons. but for now and default is to write to user_home/share/icons FOR NON-QT so meaning for gtk
+			// aCreatePathDir = {}; // already made into an object in validation section above
+			if (core.os.toolkit.indexOf('gtk') == 0) {
+				// populate aCreatePathDir, which is now an object, with key of icon size, and value of path to write it in
+			} else {
+				// its QT
+				// not yet supported, validation section above will throw
+			}
 		}
-	}
+	};
 	
-	return [{status:'ok', reason:'~~made iconset~~'}];
+	step0();
+	
+	return deferredMain_returnIconset.promise; // return [{status:'ok', reason:'~~made iconset~~'}];
 }
 // End - Addon Functionality
 
