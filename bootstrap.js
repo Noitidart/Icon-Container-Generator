@@ -189,15 +189,47 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 					}
 				},
 				listener: { // framescript msg listener
+					funcScope: ICGenWorkerFuncs.fwInstances[aId].callbacks
 					receiveMessage: function(aMsgEvent) {
 						var aMsgEventData = aMsgEvent.data;
 						console.log('ICGenWorkerFuncs.fwInstances[aId] getting aMsgEventData:', aMsgEventData);
 						// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
-						aMsgEventData.push(aMsgEvent);
-						var funcName = aMsgEventData.shift();
-						if (funcName in ICGenWorkerFuncs.fwInstances[aId].callbacks) {
-							ICGenWorkerFuncs.fwInstances[aId].callbacks[funcName].apply(null, aMsgEventData);
+						
+						var callbackPendingId;
+						if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
+							callbackPendingId = aMsgEventData.pop();
 						}
+						
+						aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
+						
+						var funcName = aMsgEventData.shift();
+						if (funcName in this.funcScope) {
+							var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
+							
+							if (callbackPendingId) {
+								// rez_parentscript_call must be an array or promise that resolves with an array
+								if (rez_parentscript_call.constructor.name == 'Promise') {
+									rez_parentscript_call.then(
+										function(aVal) {
+											// aVal must be an array
+											aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
+										},
+										function(aReason) {
+											aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+										}
+									).catch(
+										function(aCatch) {
+											aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+										}
+									);
+								} else {
+									// assume array
+									aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, rez_parentscript_call]);
+								}
+							}
+						}
+						else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+						
 					}
 				}
 			};

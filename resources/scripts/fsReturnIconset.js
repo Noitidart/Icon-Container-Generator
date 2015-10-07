@@ -78,6 +78,16 @@ function contentMMFromContentWindow_Method2(aContentWindow) {
 
 // start - comm layer with server
 const SAM_CB_PREFIX = '_sam_gen_cb_';
+function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
+	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
+	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap; // todo: figure out how to get global scope here, as bootstrap is undefined
+	aCallbackScope[thisCallbackId] = function(aMessageArr) {
+		delete aCallbackScope[thisCallbackId];
+		aCallback.apply(null, aMessageArr);
+	}
+	aMessageArr.push(thisCallbackId);
+	aMessageManager.sendAsyncMessage(aGroupId, aMessageArr);
+}
 var bootstrapMsgListener = {
 	funcScope: bootstrapCallbacks
 	receiveMessage: function(aMsgEvent) {
@@ -116,7 +126,7 @@ var bootstrapMsgListener = {
 				}
 			}
 		}
-		else { console.warn('funcName', funcName, 'not in scope of bootstrapMsgListener') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
 		
 	}
 };
