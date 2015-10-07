@@ -20,13 +20,14 @@ const core = {
 };
 var gAngScope;
 // var gAngInjector;
-const clientId = new Date().getTime();
 var gCFMM;
 
 // Lazy Imports
 const myServices = {};
 XPCOMUtils.defineLazyGetter(myServices, 'sb', function () { return Services.strings.createBundle(core.addon.path.locale + 'app.properties?' + core.addon.cache_key) }); // Randomize URI to work around bug 719376
 
+
+// start - personal funcitonalities
 function testLoadImage(aImgOsPath, baseOrBadge) {
 	var img = new Image();
 	img.onload = function() {
@@ -105,30 +106,6 @@ function handleDocElDragOver(e) {
 	return false;
 }
 
-function onPageReady() {
-	
-	document.documentElement.addEventListener('dragover', handleDocElDragOver, true);
-	
-	// message bootstrap, tell him im open, and that he should startup ICGenWorker if its not yet ready
-	document.getElementById('dropTarget_base').addEventListener('drop', handleDrop.bind(null, 'base'), true);
-	document.getElementById('dropTarget_base').addEventListener('dragover', handleDragOver, true);
-
-	
-	document.getElementById('dropTarget_badge').addEventListener('drop', handleDrop.bind(null, 'badge'), true);
-	document.getElementById('dropTarget_badge').addEventListener('dragover', handleDragOver, true);
-	
-}
-
-// framescript comm
-var bootstrapMsgListener = {
-	receiveMessage: function(aMsgEvent) {
-		var aMsgEventData = aMsgEvent.data;
-		console.log('framescript getting aMsgEvent:', aMsgEventData);
-		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
-		bootstrapCallbacks[aMsgEventData.shift()].apply(null, aMsgEventData);
-	}
-};
-
 var bootstrapCallbacks = {
 	generateFiles_response: function(aReturnObj) {
 		// bootstrap calls this after it runs the chromeworker returnIconset function
@@ -144,18 +121,10 @@ var bootstrapCallbacks = {
 		}
 	}
 };
-// end - framescript comm
 
-function doOnBeforeUnload() {
+// end - personal funcitonalities
 
-	contentMMFromContentWindow_Method2(window).removeMessageListener(core.addon.id, bootstrapMsgListener); // framescript comm
-
-}
-
-function onPageUnload() {
-	// message bootstrap that im going, and there are no other clients open, then terminate ICGenWorker
-}
-
+// start - angular
 var	ANG_APP = angular.module('iconcontainergenerator', [])
     .config(['$compileProvider', function( $compileProvider ) {
 			$compileProvider.imgSrcSanitizationWhitelist(/^\s*(filesystem:file|file):/);
@@ -357,6 +326,8 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions]]); // this will callback into generateFiles_response
 		}
 	}]);
+
+// end - angular
 	
 function generatePreviews() {
 	// generate aBaseSourcesNameSizeObj
@@ -600,8 +571,94 @@ function contentMMFromContentWindow_Method2(aContentWindow) {
 
 }
 // end - common helper functions
+
+// start - comm layer with server
+const SAM_CB_PREFIX = '_sam_gen_cb_';
+function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
+	var thisCallbackId = SAM_CB_PREFIX + new Date().getTime();
+	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap; // todo: figure out how to get global scope here, as bootstrap is undefined
+	aCallbackScope[thisCallbackId] = function(aMessageArr) {
+		delete aCallbackScope[thisCallbackId];
+		aCallback.apply(null, aMessageArr);
+	}
+	aMessageArr.push(thisCallbackId);
+	aMessageManager.sendAsyncMessage(aGroupId, aMessageArr);
+}
+var bootstrapMsgListener = {
+	funcScope: bootstrapCallbacks,
+	receiveMessage: function(aMsgEvent) {
+		var aMsgEventData = aMsgEvent.data;
+		console.log('framescript getting aMsgEvent:', aMsgEventData);
+		// aMsgEvent.data should be an array, with first item being the unfction name in this.funcScope
+		
+		var callbackPendingId;
+		if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
+			callbackPendingId = aMsgEventData.pop();
+		}
+		
+		var funcName = aMsgEventData.shift();
+		console.error('this.funcScope:', this.funcScope);
+		if (funcName in this.funcScope) {
+			var rez_fs_call = this.funcScope[funcName].apply(null, aMsgEventData);
+			
+			if (callbackPendingId) {
+				// rez_fs_call must be an array or promise that resolves with an array
+				if (rez_fs_call.constructor.name == 'Promise') {
+					rez_fs_call.then(
+						function(aVal) {
+							// aVal must be an array
+							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
+						},
+						function(aReason) {
+							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+						}
+					).catch(
+						function(aCatch) {
+							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+						}
+					);
+				} else {
+					// assume array
+					contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, rez_fs_call]);
+				}
+			}
+		}
+		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+		
+	}
+};
+contentMMFromContentWindow_Method2(content).addMessageListener(core.addon.id, bootstrapMsgListener);
+// end - comm layer with server
+
+// start - load unload stuff
+
+function onPageReady() {
 	
-contentMMFromContentWindow_Method2(window).addMessageListener(core.addon.id, bootstrapMsgListener); // framescript comm
+	document.documentElement.addEventListener('dragover', handleDocElDragOver, true);
+	
+	// message bootstrap, tell him im open, and that he should startup ICGenWorker if its not yet ready
+	document.getElementById('dropTarget_base').addEventListener('drop', handleDrop.bind(null, 'base'), true);
+	document.getElementById('dropTarget_base').addEventListener('dragover', handleDragOver, true);
+
+	
+	document.getElementById('dropTarget_badge').addEventListener('drop', handleDrop.bind(null, 'badge'), true);
+	document.getElementById('dropTarget_badge').addEventListener('dragover', handleDragOver, true);
+	
+}
+
+function doOnBeforeUnload() {
+
+	contentMMFromContentWindow_Method2(window).removeMessageListener(core.addon.id, bootstrapMsgListener); // framescript comm
+
+}
+
+function onPageUnload() {
+	// message bootstrap that im going, and there are no other clients open, then terminate ICGenWorker
+}
+
+// contentMMFromContentWindow_Method2(window).addMessageListener(core.addon.id, bootstrapMsgListener); // framescript comm // moved to the "server comm layer section"
 document.addEventListener('DOMContentLoaded', onPageReady, false);
 document.addEventListener('unload', onPageUnload, false);
 window.addEventListener('beforeunload', doOnBeforeUnload, false);
+
+// end - load unload stuff

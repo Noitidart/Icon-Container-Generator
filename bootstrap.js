@@ -175,7 +175,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 		
 		var doAfterAppShellDomWinReady = function() {
 			var aBrowser = aDocument.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'browser');
-			aBrowser.setAttribute('data-icon-container-generator-id', aId);
+			aBrowser.setAttribute('data-icon-container-generator-fwinstance-id', aId);
 			aBrowser.setAttribute('remote', 'true');
 			aBrowser.setAttribute('type', 'content');
 			aBrowser.setAttribute('style', 'height:100px;border:10px solid steelblue;');
@@ -183,69 +183,17 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			
 			ICGenWorkerFuncs.fwInstances[aId] = {
 				browser: aBrowser,
-				callbacks: {
-					frameworkerReady: function() {
-						deferredMain_setupFrameworker.resolve(['ok send me imgs now baby']);
-					},
-					testSettingCbInFramescript: function(arg1) {
-						console.log('in testSettingCbInFramescript on parentscript side, arg1:', arg1);
-						return ['parentscript testSettingCbInFramescript returning THISSSS'];
-					}
-				}
-			};
-			
-			ICGenWorkerFuncs.fwInstances[aId].listener = { // framescript msg listener
-				funcScope: ICGenWorkerFuncs.fwInstances[aId].callbacks,
-				receiveMessage: function(aMsgEvent) {
-					var aMsgEventData = aMsgEvent.data;
-					console.log('ICGenWorkerFuncs.fwInstances[aId] getting aMsgEventData:', aMsgEventData);
-					// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
-					
-					var callbackPendingId;
-					if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
-						callbackPendingId = aMsgEventData.pop();
-					}
-					
-					aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
-					
-					var funcName = aMsgEventData.shift();
-					if (funcName in this.funcScope) {
-						var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
-						
-						if (callbackPendingId) {
-							// rez_parentscript_call must be an array or promise that resolves with an array
-							if (rez_parentscript_call.constructor.name == 'Promise') {
-								rez_parentscript_call.then(
-									function(aVal) {
-										// aVal must be an array
-										aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
-									},
-									function(aReason) {
-										aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
-									}
-								).catch(
-									function(aCatch) {
-										aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
-									}
-								);
-							} else {
-								// assume array
-								aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, rez_parentscript_call]);
-							}
-						}
-					}
-					else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
-					
-				}
+				deferredMain_setupFrameworker: deferredMain_setupFrameworker
 			};
 			
 			aDocument.documentElement.appendChild(aBrowser);
-			console.error('aBrowser.messageManager:', aBrowser.messageManager);
-			aBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fsReturnIconset.js', false);
+			console.log('aBrowser.messageManager:', aBrowser.messageManager);
+			aBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fsReturnIconset.js', false);			
 			
-			Services.mm.addMessageListener(core.addon.id, ICGenWorkerFuncs.fwInstances[aId].listener);
+			// ICGenWorkerFuncs.fwInstances[aId].browser.messageManager.IconContainerGenerator_id = aId; // doesnt work
+			// console.error('ICGenWorkerFuncs.fwInstances[aId].browser.messageManager:', ICGenWorkerFuncs.fwInstances[aId].browser.messageManager);
 			
-			sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['testSettingCbInServer', 'arg1'], ICGenWorkerFuncs.fwInstances[aId].callbacks, function(aRetArg1) { // not using bootstrap here, as otherwise the fs listener for app.js will pick it up as well and then either he or this will delete the function
+			sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['testSettingCbInServer', 'arg1'], fsMsgListener.funcScope, function(aRetArg1) { // not using bootstrap here, as otherwise the fs listener for app.js will pick it up as well and then either he or this will delete the function
 				console.log('back in parentscript callback, aRetArg1:', aRetArg1);
 			});
 			
@@ -265,15 +213,15 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	},
 	destroyFrameworker: function(aId) {
 		
-		var aTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
-		aTimer.initWithCallback({
-			notify: function() {
+		// var aTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
+		// aTimer.initWithCallback({
+			// notify: function() {
 					console.error('will now destory remote browser, i hope this will trigger the framescript unload event, because that removes the listener, otherwise i think that the attached message listener from that framescript stays alive somehow');
 					ICGenWorkerFuncs.fwInstances[aId].browser.parentNode.removeChild(ICGenWorkerFuncs.fwInstances[aId].browser); // im hoping this triggers the unload event on framescript
 					Services.mm.removeMessageListener(core.addon.id, ICGenWorkerFuncs.fwInstances[aId].listener);
 					delete ICGenWorkerFuncs.fwInstances[aId];
-			}
-		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
+			// }
+		// }, 10000, Ci.nsITimer.TYPE_ONE_SHOT);
 		
 
 	},
@@ -307,28 +255,79 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	*/
 };
 
-var fsMsgListener = { // framescript msg listener
-	receiveMessage: function(aMsgEvent) {
-		var aMsgEventData = aMsgEvent.data;
-		console.log('bootstrap getting aMsgEventData:', aMsgEventData);
-		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
-		aMsgEventData.push(aMsgEvent);
-		var funcName = aMsgEvent.data.shift();
-		if (funcName in bootstrap) {
-			bootstrap[funcName].apply(null, aMsgEventData);
-		}
+var fsFuncs = {
+	// app.js functions
+	appFunc_generateFiles: function(argsForWorkerReturnIconset, aFrameScriptMessageEvent) {
+		console.log('in appFunc_generateFiles, arguments:', arguments);
+		argsForWorkerReturnIconset.splice(0, 0, 'returnIconset'); // add in func name for my style of postMessage
+		ICGenWorker.postMessageWithCallback(argsForWorkerReturnIconset, function(aStatusObj) {
+			console.log('returnIconset completed, aStatusObj:', aStatusObj);
+			aFrameScriptMessageEvent.target.messageManager.sendAsyncMessage(core.addon.id, ['generateFiles_response', aStatusObj]);
+		});
+	},
+	// fsReturnIconset.js functions
+	frameworkerReady: function(aMsgEvent) {
+		var aBrowser = aMsgEvent.target;
+		console.info('fwInstancesId:', aBrowser);
+		var fwInstancesId = aBrowser.getAttribute('data-icon-container-generator-fwinstance-id');
+		console.info('fwInstancesId:', fwInstancesId);
+		
+		ICGenWorkerFuncs.fwInstances[fwInstancesId].deferredMain_setupFrameworker.resolve(['ok send me imgs now baby']);
+	},
+	testSettingCbInFramescript: function(arg1) {
+		console.log('in testSettingCbInFramescript on parentscript side, arg1:', arg1);
+		return ['parentscript testSettingCbInFramescript returning THISSSS'];
 	}
 };
 
-function appFunc_generateFiles(argsForWorkerReturnIconset, aFrameScriptMessageEvent) {
-	console.log('in appFunc_generateFiles, arguments:', arguments);
-	argsForWorkerReturnIconset.splice(0, 0, 'returnIconset'); // add in func name for my style of postMessage
-	ICGenWorker.postMessageWithCallback(argsForWorkerReturnIconset, function(aStatusObj) {
-		console.log('returnIconset completed, aStatusObj:', aStatusObj);
-		aFrameScriptMessageEvent.target.messageManager.sendAsyncMessage(core.addon.id, ['generateFiles_response', aStatusObj]);
-	});
-}
 // END - Addon Functionalities
+
+// start - comm layer with framescripts
+var fsMsgListener = {
+	funcScope: fsFuncs,
+	receiveMessage: function(aMsgEvent) {
+		var aMsgEventData = aMsgEvent.data;
+		console.error('fsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
+		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
+		
+		var callbackPendingId;
+		if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
+			callbackPendingId = aMsgEventData.pop();
+		}
+		
+		aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
+		
+		var funcName = aMsgEventData.shift();
+		if (funcName in this.funcScope) {
+			var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
+			
+			if (callbackPendingId) {
+				// rez_parentscript_call must be an array or promise that resolves with an array
+				if (rez_parentscript_call.constructor.name == 'Promise') {
+					rez_parentscript_call.then(
+						function(aVal) {
+							// aVal must be an array
+							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
+						},
+						function(aReason) {
+							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+						}
+					).catch(
+						function(aCatch) {
+							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+						}
+					);
+				} else {
+					// assume array
+					aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, rez_parentscript_call]);
+				}
+			}
+		}
+		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+		
+	}
+};
+// end - comm layer with framescripts
 
 function install() {}
 
