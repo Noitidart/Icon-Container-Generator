@@ -42,28 +42,34 @@ self.onmessage = function(aMsgEvent) {
 		callbackPendingId = aMsgEventData.pop();
 	}
 	
-	var rez_worker_call = WORKER[aMsgEventData.shift()].apply(null, aMsgEventData);
+	var funcName = aMsgEventData.shift();
 	
-	if (callbackPendingId) {
-		if (rez_worker_call.constructor.name == 'Promise') {
-			rez_worker_call.then(
-				function(aVal) {
-					// aVal must be array
-					self.postMessage([callbackPendingId, aVal]);
-				},
-				function(aReason) {
-					self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
-				}
-			).catch(
-				function(aCatch) {
-					self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
-				}
-			);
-		} else {
-			// assume array
-			self.postMessage([callbackPendingId, rez_worker_call]);
+	if (funcName in WORKER) {
+		var rez_worker_call = WORKER[funcName].apply(null, aMsgEventData);
+		
+		if (callbackPendingId) {
+			if (rez_worker_call.constructor.name == 'Promise') {
+				rez_worker_call.then(
+					function(aVal) {
+						// aVal must be array
+						self.postMessage([callbackPendingId, aVal]);
+					},
+					function(aReason) {
+						self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+					}
+				).catch(
+					function(aCatch) {
+						self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+					}
+				);
+			} else {
+				// assume array
+				self.postMessage([callbackPendingId, rez_worker_call]);
+			}
 		}
 	}
+	else { console.warn('funcName', funcName, 'not in scope of WORKER') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 };
 
 // set up postMessageWithCallback so chromeworker can send msg to mainthread to do something then return here. must return an array, thta array is arguments applied to callback

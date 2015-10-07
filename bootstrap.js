@@ -186,51 +186,56 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 				callbacks: {
 					frameworkerReady: function() {
 						deferredMain_setupFrameworker.resolve(['ok send me imgs now baby']);
+					},
+					testSettingCbInFramescript: function(arg1) {
+						console.log('in testSettingCbInFramescript on parentscript side, arg1:', arg1);
+						return ['parentscript testSettingCbInFramescript returning THISSSS'];
 					}
-				},
-				listener: { // framescript msg listener
-					funcScope: ICGenWorkerFuncs.fwInstances[aId].callbacks
-					receiveMessage: function(aMsgEvent) {
-						var aMsgEventData = aMsgEvent.data;
-						console.log('ICGenWorkerFuncs.fwInstances[aId] getting aMsgEventData:', aMsgEventData);
-						// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
+				}
+			};
+			
+			ICGenWorkerFuncs.fwInstances[aId].listener = { // framescript msg listener
+				funcScope: ICGenWorkerFuncs.fwInstances[aId].callbacks,
+				receiveMessage: function(aMsgEvent) {
+					var aMsgEventData = aMsgEvent.data;
+					console.log('ICGenWorkerFuncs.fwInstances[aId] getting aMsgEventData:', aMsgEventData);
+					// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
+					
+					var callbackPendingId;
+					if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
+						callbackPendingId = aMsgEventData.pop();
+					}
+					
+					aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
+					
+					var funcName = aMsgEventData.shift();
+					if (funcName in this.funcScope) {
+						var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
 						
-						var callbackPendingId;
-						if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SAM_CB_PREFIX) == 0) {
-							callbackPendingId = aMsgEventData.pop();
-						}
-						
-						aMsgEventData.push(aMsgEvent); // this is special for server side, so the function can do aMsgEvent.target.messageManager to send a response
-						
-						var funcName = aMsgEventData.shift();
-						if (funcName in this.funcScope) {
-							var rez_parentscript_call = this.funcScope[funcName].apply(null, aMsgEventData);
-							
-							if (callbackPendingId) {
-								// rez_parentscript_call must be an array or promise that resolves with an array
-								if (rez_parentscript_call.constructor.name == 'Promise') {
-									rez_parentscript_call.then(
-										function(aVal) {
-											// aVal must be an array
-											aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
-										},
-										function(aReason) {
-											aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
-										}
-									).catch(
-										function(aCatch) {
-											aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
-										}
-									);
-								} else {
-									// assume array
-									aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, rez_parentscript_call]);
-								}
+						if (callbackPendingId) {
+							// rez_parentscript_call must be an array or promise that resolves with an array
+							if (rez_parentscript_call.constructor.name == 'Promise') {
+								rez_parentscript_call.then(
+									function(aVal) {
+										// aVal must be an array
+										aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
+									},
+									function(aReason) {
+										aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+									}
+								).catch(
+									function(aCatch) {
+										aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+									}
+								);
+							} else {
+								// assume array
+								aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, rez_parentscript_call]);
 							}
 						}
-						else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
-						
 					}
+					else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+					
 				}
 			};
 			
@@ -239,6 +244,11 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			aBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fsReturnIconset.js', false);
 			
 			Services.mm.addMessageListener(core.addon.id, ICGenWorkerFuncs.fwInstances[aId].listener);
+			
+			sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['testSettingCbInServer', 'arg1'], ICGenWorkerFuncs.fwInstances[aId].callbacks, function(aRetArg1) { // not using bootstrap here, as otherwise the fs listener for app.js will pick it up as well and then either he or this will delete the function
+				console.log('back in parentscript callback, aRetArg1:', aRetArg1);
+			});
+			
 		};
 		
 		
@@ -266,7 +276,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
 		
 
-	}
+	},
 	tellFrameworkerLoadImg: function(aImgPath) {
 		var deferredMain_tellFrameworkerLoadImg = new Deferred();
 		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aImgPath], ICGenWorkerFuncs.fwInstances[aId].callbacks, function(aImgDataObj) {
@@ -459,27 +469,33 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 				callbackPendingId = aMsgEventData.pop();
 			}
 			
-			var rez_mainthread_call = aFuncExecScope[aMsgEventData.shift()].apply(null, aMsgEventData);
+			var funcName = aMsgEventData.shift();
 			
-			if (callbackPendingId) {
-				if (rez_mainthread_call.constructor.name == 'Promise') {
-					rez_mainthread_call.then(
-						function(aVal) {
-							bootstrap[workerScopeName].postMessage([callbackPendingId, aVal]);
-						},
-						function(aReason) {
-							bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
-						}
-					).catch(
-						function(aCatch) {
-							bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
-						}
-					);
-				} else {
-					// assume array
-					bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
+			if (funcName in aFuncExecScope) {
+				var rez_mainthread_call = aFuncExecScope[funcName].apply(null, aMsgEventData);
+				
+				if (callbackPendingId) {
+					if (rez_mainthread_call.constructor.name == 'Promise') {
+						rez_mainthread_call.then(
+							function(aVal) {
+								bootstrap[workerScopeName].postMessage([callbackPendingId, aVal]);
+							},
+							function(aReason) {
+								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+							}
+						).catch(
+							function(aCatch) {
+								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+							}
+						);
+					} else {
+						// assume array
+						bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
+					}
 				}
 			}
+			else { console.warn('funcName', funcName, 'not in scope of aFuncExecScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 		};
 		
 		var beforeInitListener = function(aMsgEvent) {
@@ -522,7 +538,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 
 const SAM_CB_PREFIX = '_sam_gen_cb_';
 function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
-	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
+	var thisCallbackId = SAM_CB_PREFIX + new Date().getTime();
 	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap;
 	aCallbackScope[thisCallbackId] = function(aMessageArr) {
 		delete aCallbackScope[thisCallbackId];

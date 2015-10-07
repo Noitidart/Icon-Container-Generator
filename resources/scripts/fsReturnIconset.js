@@ -59,6 +59,10 @@ var bootstrapCallbacks = {
 		};
 		
 		return deferredMain_loadImg.promise;
+	},
+	testSettingCbInServer: function(gotArg1) {
+		console.log('in testSettingCbInServer gotArg1:', gotArg1);
+		return ['testSettingCbInServer fs side is sending to ps THIS'];
 	}
 };
 // end - functionalities
@@ -79,7 +83,7 @@ function contentMMFromContentWindow_Method2(aContentWindow) {
 // start - comm layer with server
 const SAM_CB_PREFIX = '_sam_gen_cb_';
 function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
-	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
+	var thisCallbackId = SAM_CB_PREFIX + new Date().getTime();
 	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap; // todo: figure out how to get global scope here, as bootstrap is undefined
 	aCallbackScope[thisCallbackId] = function(aMessageArr) {
 		delete aCallbackScope[thisCallbackId];
@@ -89,7 +93,7 @@ function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aC
 	aMessageManager.sendAsyncMessage(aGroupId, aMessageArr);
 }
 var bootstrapMsgListener = {
-	funcScope: bootstrapCallbacks
+	funcScope: bootstrapCallbacks,
 	receiveMessage: function(aMsgEvent) {
 		var aMsgEventData = aMsgEvent.data;
 		console.log('framescript getting aMsgEvent:', aMsgEventData);
@@ -131,6 +135,10 @@ var bootstrapMsgListener = {
 	}
 };
 contentMMFromContentWindow_Method2(content).addMessageListener(core.addon.id, bootstrapMsgListener);
+
+sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(content), core.addon.id, ['testSettingCbInFramescript', 'ARG1'], bootstrapMsgListener.funcScope, function(aRetArg1){
+	console.log('back in framescript side callback aRetArg1:', aRetArg1);
+});
 // end - comm layer with server
 
 // start - load unload stuff
