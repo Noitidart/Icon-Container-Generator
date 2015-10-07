@@ -235,6 +235,13 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 		
 
 	}
+	tellFrameworkerLoadImg: function(aImgPath) {
+		var deferredMain_tellFrameworkerLoadImg = new Deferred();
+		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aImgPath], ICGenWorkerFuncs.fwInstances[aId].callbacks, function(aImgDataObj) {
+			deferredMain_tellFrameworkerLoadImg.resolve(aImgDataObj);
+		});
+		return deferredMain_tellFrameworkerLoadImg.promise;
+	}
 	/*
 	loadImgGetImgData: function(aImgPath) {
 		// aImgPath must be http or file uri NOT os path
@@ -479,4 +486,16 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 	
 	return deferredMain_SICWorker.promise;
 	
+}
+
+const SAM_CB_PREFIX = '_sam_gen_cb_';
+function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
+	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
+	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap;
+	aCallbackScope[thisCallbackId] = function(aMessageArr) {
+		delete aCallbackScope[thisCallbackId];
+		aCallback.apply(null, aMessageArr);
+	}
+	aMessageArr.push(thisCallbackId);
+	aMessageManager.sendAsyncMessage(aGroupId, aMessageArr);
 }

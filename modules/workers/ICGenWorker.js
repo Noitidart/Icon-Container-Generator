@@ -48,6 +48,7 @@ self.onmessage = function(aMsgEvent) {
 		if (rez_worker_call.constructor.name == 'Promise') {
 			rez_worker_call.then(
 				function(aVal) {
+					// aVal must be array
 					self.postMessage([callbackPendingId, aVal]);
 				},
 				function(aReason) {
@@ -456,6 +457,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	// start - globals for steps
 	var fwId;
 	var destroyFrameworker; // step0 sets this to a function i call to clean up
+	var imgPathData = {}; //keys are image path, and value is object holding data
 	// end - globals for steps
 	
 	var step0 = function() {
