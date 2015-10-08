@@ -3,7 +3,6 @@ const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constru
 Cm.QueryInterface(Ci.nsIComponentRegistrar);
 Cu.import('resource://gre/modules/devtools/Console.jsm');
 Cu.import('resource://gre/modules/osfile.jsm');
-Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
 
@@ -27,9 +26,13 @@ var imgPathData = {}; //keys are image path, and value is object holding data
 var bootstrapCallbacks = {
 	loadImg: function(aImgPath) {
 		// aImgPath must be file uri, or chrome path, or http NOT os path
+		console.error('in loadImg');
+		
 		var deferredMain_loadImg = new Deferred();
 		
-		imgPathData[aImgPath].Image = new Image();
+		imgPathData[aImgPath] = {};
+		
+		imgPathData[aImgPath].Image = new content.Image();
 		
 		imgPathData[aImgPath].Image.onload = function() {
 			// imgPathData[aImgPath].Canvas = content.document.createElementNS(NS_HTML, 'canvas')
@@ -37,26 +40,28 @@ var bootstrapCallbacks = {
 			imgPathData[aImgPath].w = this.naturalWidth;
 			imgPathData[aImgPath].h = this.naturalHeight;
 			imgPathData[aImgPath].status = 'img-ok';
-			deferredMain_loadImg.resolve({
+			deferredMain_loadImg.resolve([{
 				status: 'img-ok',
 				w: imgPathData[aImgPath].w,
 				h: imgPathData[aImgPath].h
-			})
+			}]);
 		};
 		
 		imgPathData[aImgPath].Image.onabort = function() {
 			imgPathData[aImgPath].status = 'img-abort';
-			deferredMain_loadImg.resolve({
+			deferredMain_loadImg.resolve([{
 				status: 'img-abort'
-			})
+			}]);
 		};
 		
 		imgPathData[aImgPath].Image.onerror = function() {
 			imgPathData[aImgPath].status = 'img-error';
-			deferredMain_loadImg.resolve({
+			deferredMain_loadImg.resolve([{
 				status: 'img-error'
-			})
+			}]);
 		};
+		
+		imgPathData[aImgPath].Image.src = aImgPath;
 		
 		return deferredMain_loadImg.promise;
 	}
@@ -74,6 +79,41 @@ function contentMMFromContentWindow_Method2(aContentWindow) {
 	return gCFMM;
 
 }
+
+function Deferred() {
+	try {
+		/* A method to resolve the associated Promise with the value passed.
+		 * If the promise is already settled it does nothing.
+		 *
+		 * @param {anything} value : This value is used to resolve the promise
+		 * If the value is a Promise then the associated promise assumes the state
+		 * of Promise passed as value.
+		 */
+		this.resolve = null;
+
+		/* A method to reject the assocaited Promise with the value passed.
+		 * If the promise is already settled it does nothing.
+		 *
+		 * @param {anything} reason: The reason for the rejection of the Promise.
+		 * Generally its an Error object. If however a Promise is passed, then the Promise
+		 * itself will be the reason for rejection no matter the state of the Promise.
+		 */
+		this.reject = null;
+
+		/* A newly created Pomise object.
+		 * Initially in pending state.
+		 */
+		this.promise = new Promise(function(resolve, reject) {
+			this.resolve = resolve;
+			this.reject = reject;
+		}.bind(this));
+		Object.freeze(this);
+	} catch (ex) {
+		console.error('Promise not available!', ex);
+		throw new Error('Promise not available!');
+	}
+}
+
 // end - common helper functions
 
 // start - comm layer with server
@@ -92,7 +132,7 @@ var bootstrapMsgListener = {
 	funcScope: bootstrapCallbacks,
 	receiveMessage: function(aMsgEvent) {
 		var aMsgEventData = aMsgEvent.data;
-		console.log('framescript getting aMsgEvent:', aMsgEventData);
+		console.log('framescript getting aMsgEvent, unevaled:', uneval(aMsgEventData));
 		// aMsgEvent.data should be an array, with first item being the unfction name in this.funcScope
 		
 		var callbackPendingId;

@@ -79,7 +79,7 @@ self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransf
 	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
 	aFuncExecScope[thisCallbackId] = function() {
 		delete aFuncExecScope[thisCallbackId];
-		console.log('in worker callback trigger wrap, will apply aCB with these arguments:', arguments);
+		console.log('in worker callback trigger wrap, will apply aCB with these arguments:', uneval(arguments));
 		aCB.apply(null, arguments[0]);
 	};
 	aPostMessageArr.push(thisCallbackId);
@@ -282,6 +282,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			reason: 'must provide at least one BASE image'
 		}];
 	}
+	// aBaseSrcImgPathArr check, ensure to duplicates maybe? if i do, then i should also do with aOptions.aBadgeSrcImgPathArr
 	
 	// aOutputSizesArr check, need at least one
 	if (!aOutputSizesArr || !Array.isArray(aOutputSizesArr) || aOutputSizesArr.length == 0) {
@@ -456,17 +457,39 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	var step1 = function(msgFrom_fsReturnIconset_onPageReady) {
 		console.log('worker: step1');
 		console.log('msgFrom_fsReturnIconset_onPageReady:', msgFrom_fsReturnIconset_onPageReady);
-		self.postMessage(['destroyFrameworker', fwId]);
-		deferredMain_returnIconset.resolve([{
-			status: 'ok',
-			reason: 'temporary resolve for now'
-		}]);
-		return; // :debug;
+		// self.postMessage(['destroyFrameworker', fwId]);
+		// deferredMain_returnIconset.resolve([{
+			// status: 'ok',
+			// reason: 'temporary resolve for now'
+		// }]);
+		// return; // :debug;
+		
 		// send message to mainthread for each image path, mainthread should load it into an <img> and then send back arraybuffer, with height and width. or if onabort or onerror of image load it should tell us why. but leave the checking for square and etc to chromeworker after it receives it
 			// mainthread will create <img> then after load create canvas, then getImageData, then transfer back arrbuf with height and width
 		var promiseAllArr_loadImgAndGetImgDatas = [];
 		
-		
+		for (var i=0; i<aBaseSrcImgPathArr.length; i++) {
+			if ((aBaseSrcImgPathArr[i] in imgPathData)) { continue }
+			
+			imgPathData[aBaseSrcImgPathArr[i]] = {};
+			imgPathData[aBaseSrcImgPathArr[i]].img_src = aBaseSrcImgPathArr[i].indexOf('://') > -1 ? aBaseSrcImgPathArr[i] : OS.Path.toFileURI(aBaseSrcImgPathArr[i]); // if path is a os path, convert it to file uri // :todo: add verification if not file uri and if not then convert. must be chrome:// resource:// http(s):// or file:// // so here i am guessing if it has no `://` then it is os path, so i convert it
+			var deferred_loadImage = new Deferred();
+			promiseAllArr_loadImgAndGetImgDatas.push(deferred_loadImage.promise);
+			self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aBaseSrcImgPathArr].img_src, fwId], function(aIInBaseSrcArr, aImgInfoObj) {
+				console.info('in callback of tellFrameworkerLoadImg in worker, the arguments are:', uneval(arguments));
+				if (aImgInfoObj.status == 'ok') {
+					imgPathData[aBaseSrcImgPathArr[aIInBaseSrcArr]].w = aImgInfoObj.w;
+					imgPathData[aBaseSrcImgPathArr[aIInBaseSrcArr]].h = aImgInfoObj.h;
+					deferred_loadImage.resolve();
+				} else {
+					if (aImgInfoObj.status == 'img-abort') {
+						deferred_loadImage.reject('<img> load was aborted on path "' + aBaseSrcImgPathArr[aIInBaseSrcArr] + '"');
+					} else if (aImgInfoObj.status == 'img-error') {
+						deferred_loadImage.reject('Error on loading <img>, it may not be a real image file, for path "' + aBaseSrcImgPathArr[aIInBaseSrcArr] + '"');
+					}
+				}
+			}.bind(null, i));
+		}
 		
 		var promiseAll_loadImgAndGetImgDatas = Promise.all(promiseAllArr_loadImgAndGetImgDatas);
 		promiseAll_loadImgAndGetImgDatas.then(
@@ -474,6 +497,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				console.log('Fullfilled - promiseAll_loadImgAndGetImgDatas - ', aVal);
 				// start - do stuff here - promiseAll_loadImgAndGetImgDatas
 				// check image dimensions and push to obj
+				self.postMessage(['destroyFrameworker', fwId]);
 				deferredMain_returnIconset.resolve([{
 					status: 'ok',
 					reason: 'temporary resolve for now'
@@ -483,13 +507,23 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			function(aReason) {
 				var rejObj = {name:'promiseAll_loadImgAndGetImgDatas', aReason:aReason};
 				console.warn('Rejected - promiseAll_loadImgAndGetImgDatas - ', rejObj);
-				deferredMain_returnIconset.reject(rejObj);
+				self.postMessage(['destroyFrameworker', fwId]);
+				deferredMain_returnIconset.resolve([{
+					status: 'fail',
+					reason: 'promise rejected',
+					aCaught: rejObj
+				}]);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promiseAll_loadImgAndGetImgDatas', aCaught:aCaught};
 				console.error('Caught - promiseAll_loadImgAndGetImgDatas - ', rejObj);
-				deferredMain_returnIconset.reject(rejObj);
+				self.postMessage(['destroyFrameworker', fwId]);
+				deferredMain_returnIconset.resolve([{
+					status: 'fail',
+					reason: 'promise caught',
+					aCaught: aCaught
+				}]);
 			}
 		);
 	};

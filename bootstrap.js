@@ -203,10 +203,10 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 		
 
 	},
-	tellFrameworkerLoadImg: function(aImgPath) {
+	tellFrameworkerLoadImg: function(aImgPath, aId) {
 		var deferredMain_tellFrameworkerLoadImg = new Deferred();
-		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aImgPath], ICGenWorkerFuncs.fwInstances[aId].callbacks, function(aImgDataObj) {
-			deferredMain_tellFrameworkerLoadImg.resolve(aImgDataObj);
+		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aImgPath], fsMsgListener.funcScope, function(aImgDataObj) {
+			deferredMain_tellFrameworkerLoadImg.resolve([aImgDataObj]);
 		});
 		return deferredMain_tellFrameworkerLoadImg.promise;
 	}
