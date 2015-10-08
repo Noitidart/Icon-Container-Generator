@@ -255,7 +255,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	*/
 };
 
-var fsFuncs = {
+var fsFuncs = { // functions for framescripts to call in main thread
 	// app.js functions
 	appFunc_generateFiles: function(argsForWorkerReturnIconset, aFrameScriptMessageEvent) {
 		console.log('in appFunc_generateFiles, arguments:', arguments);
