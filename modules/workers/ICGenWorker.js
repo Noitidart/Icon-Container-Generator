@@ -466,6 +466,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		
 		// send message to mainthread for each image path, mainthread should load it into an <img> and then send back arraybuffer, with height and width. or if onabort or onerror of image load it should tell us why. but leave the checking for square and etc to chromeworker after it receives it
 			// mainthread will create <img> then after load create canvas, then getImageData, then transfer back arrbuf with height and width
+			// this step1 will check if error or abort on image load, and if so it aborts the process
 		var promiseAllArr_loadImgAndGetImgDatas = [];
 		
 		for (var i=0; i<aBaseSrcImgPathArr.length; i++) {
@@ -477,7 +478,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			promiseAllArr_loadImgAndGetImgDatas.push(deferred_loadImage.promise);
 			self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aBaseSrcImgPathArr].img_src, fwId], function(aIInBaseSrcArr, aImgInfoObj) {
 				console.info('in callback of tellFrameworkerLoadImg in worker, the arguments are:', uneval(arguments));
-				if (aImgInfoObj.status == 'ok') {
+				if (aImgInfoObj.status == 'img-ok') {
 					imgPathData[aBaseSrcImgPathArr[aIInBaseSrcArr]].w = aImgInfoObj.w;
 					imgPathData[aBaseSrcImgPathArr[aIInBaseSrcArr]].h = aImgInfoObj.h;
 					deferred_loadImage.resolve();
@@ -486,6 +487,8 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 						deferred_loadImage.reject('<img> load was aborted on path "' + aBaseSrcImgPathArr[aIInBaseSrcArr] + '"');
 					} else if (aImgInfoObj.status == 'img-error') {
 						deferred_loadImage.reject('Error on loading <img>, it may not be a real image file, for path "' + aBaseSrcImgPathArr[aIInBaseSrcArr] + '"');
+					} else {
+						deferred_loadImage.reject('Failed to load <img> for unknown reason for path "' + aBaseSrcImgPathArr[aIInBaseSrcArr] + '"');
 					}
 				}
 			}.bind(null, i));
@@ -510,7 +513,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				self.postMessage(['destroyFrameworker', fwId]);
 				deferredMain_returnIconset.resolve([{
 					status: 'fail',
-					reason: 'promise rejected',
+					reason: aReason, // its a string message, lets show it to the user
 					aCaught: rejObj
 				}]);
 			}

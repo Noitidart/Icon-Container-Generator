@@ -15,6 +15,7 @@ const core = {
 		path: {
 			name: 'icon-container-generator',
 			content: 'chrome://icon-container-generator/content/',
+			content_remote: 'chrome://icon-container-generator/content/content_remote/',
 			images: 'chrome://icon-container-generator/content/resources/images/',
 			locale: 'chrome://icon-container-generator/locale/',
 			modules: 'chrome://icon-container-generator/content/modules/',
@@ -160,9 +161,12 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			var aBrowser = aDocument.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'browser');
 			aBrowser.setAttribute('data-icon-container-generator-fwinstance-id', aId);
 			aBrowser.setAttribute('remote', 'true');
+			// aBrowser.setAttribute('disablesecurity', true);
+			// aBrowser.setAttribute('disablehistory', 'true');
 			aBrowser.setAttribute('type', 'content');
 			aBrowser.setAttribute('style', 'height:100px;border:10px solid steelblue;');
 			// aBrowser.setAttribute('src', 'data:text/html,back to content');
+			aBrowser.setAttribute('src', core.addon.path.content_remote + 'frameworker.htm');
 			
 			ICGenWorkerFuncs.fwInstances[aId] = {
 				browser: aBrowser,
@@ -206,6 +210,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	tellFrameworkerLoadImg: function(aImgPath, aId) {
 		var deferredMain_tellFrameworkerLoadImg = new Deferred();
 		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aImgPath], fsMsgListener.funcScope, function(aImgDataObj) {
+			console.log('in bootstrap callback of tellFrameworkerLoadImg, resolving');
 			deferredMain_tellFrameworkerLoadImg.resolve([aImgDataObj]);
 		});
 		return deferredMain_tellFrameworkerLoadImg.promise;
