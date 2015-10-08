@@ -146,23 +146,6 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 		// aImagePathArr is an arrya of os paths to the images to load
 		// this will load the images, then draw to canvas, then get get image data, then get array buffer/Bytedata for each image, and transfer object back it to the worker
 	},
-	testMT: function() {
-		console.log('in testMT on mainthread arguments:', arguments);
-		// start return sync test
-		// return ['arg1', 'and arg2'];
-		// start returning promise test
-		var mainDeferred_testMT = new Deferred();
-		
-		var aTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
-		aTimer.initWithCallback({
-			notify: function() {
-				console.log('timer up will resolve deferred');
-				mainDeferred_testMT.resolve(['resolved arg1', 'and resolved arg2'])
-			}
-		}, 1000, Ci.nsITimer.TYPE_ONE_SHOT);
-		
-		return mainDeferred_testMT.promise;
-	},
 	fwInstances: {}, // frameworker instances, obj with id is aId which is arg of setupFrameworker
 	setupFrameworker: function(aId) {
 		// aId is the id to create frameworker with
@@ -193,10 +176,6 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			// ICGenWorkerFuncs.fwInstances[aId].browser.messageManager.IconContainerGenerator_id = aId; // doesnt work
 			// console.error('ICGenWorkerFuncs.fwInstances[aId].browser.messageManager:', ICGenWorkerFuncs.fwInstances[aId].browser.messageManager);
 			
-			sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['testSettingCbInServer', 'arg1'], fsMsgListener.funcScope, function(aRetArg1) { // not using bootstrap here, as otherwise the fs listener for app.js will pick it up as well and then either he or this will delete the function
-				console.log('back in parentscript callback, aRetArg1:', aRetArg1);
-			});
-			
 		};
 		
 		
@@ -218,7 +197,6 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			// notify: function() {
 					console.error('will now destory remote browser, i hope this will trigger the framescript unload event, because that removes the listener, otherwise i think that the attached message listener from that framescript stays alive somehow');
 					ICGenWorkerFuncs.fwInstances[aId].browser.parentNode.removeChild(ICGenWorkerFuncs.fwInstances[aId].browser); // im hoping this triggers the unload event on framescript
-					Services.mm.removeMessageListener(core.addon.id, ICGenWorkerFuncs.fwInstances[aId].listener);
 					delete ICGenWorkerFuncs.fwInstances[aId];
 			// }
 		// }, 10000, Ci.nsITimer.TYPE_ONE_SHOT);
@@ -255,7 +233,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 	*/
 };
 
-var fsFuncs = {
+var fsFuncs = { // functions for framescripts to call in main thread
 	// app.js functions
 	appFunc_generateFiles: function(argsForWorkerReturnIconset, aFrameScriptMessageEvent) {
 		console.log('in appFunc_generateFiles, arguments:', arguments);
@@ -273,12 +251,42 @@ var fsFuncs = {
 		console.info('fwInstancesId:', fwInstancesId);
 		
 		ICGenWorkerFuncs.fwInstances[fwInstancesId].deferredMain_setupFrameworker.resolve(['ok send me imgs now baby']);
-	},
-	testSettingCbInFramescript: function(arg1) {
-		console.log('in testSettingCbInFramescript on parentscript side, arg1:', arg1);
-		return ['parentscript testSettingCbInFramescript returning THISSSS'];
 	}
 };
+
+function startMainWorker() {
+	var promise_getICGenWorker = SICWorker('ICGenWorker', core.addon.path.workers + 'ICGenWorker.js', ICGenWorkerFuncs);
+	promise_getICGenWorker.then(
+		function(aVal) {
+			console.log('Fullfilled - promise_getICGenWorker - ', aVal);
+			// start - do stuff here - promise_getICGenWorker
+			// end - do stuff here - promise_getICGenWorker
+		},
+		function(aReason) {
+			var rejObj = {
+				name: 'promise_getICGenWorker',
+				aReason: aReason
+			};
+			console.warn('Rejected - promise_getICGenWorker - ', rejObj);
+		}
+	).catch(
+		function(aCaught) {
+			var rejObj = {
+				name: 'promise_getICGenWorker',
+				aCaught: aCaught
+			};
+			console.error('Caught - promise_getICGenWorker - ', rejObj);
+		}
+	);
+}
+
+function termMainWorker() {
+	if (ICGenWorker) {
+		ICGenWorker.terminate();
+		delete bootstrap.ICGenWorker;
+		console.error('terminated');
+	}
+}
 
 // END - Addon Functionalities
 
@@ -342,32 +350,7 @@ function startup(aData, aReason) {
 	extendCore();
 	
 	// startup worker
-	var promise_getICGenWorker = SICWorker('ICGenWorker', core.addon.path.workers + 'ICGenWorker.js', ICGenWorkerFuncs);
-	promise_getICGenWorker.then(
-		function(aVal) {
-			console.log('Fullfilled - promise_getICGenWorker - ', aVal);
-			// start - do stuff here - promise_getICGenWorker
-			ICGenWorker.postMessageWithCallback(['testWK'], function() {
-				console.log('in mt callback with arguments:', arguments);
-			})
-			// end - do stuff here - promise_getICGenWorker
-		},
-		function(aReason) {
-			var rejObj = {
-				name: 'promise_getICGenWorker',
-				aReason: aReason
-			};
-			console.warn('Rejected - promise_getICGenWorker - ', rejObj);
-		}
-	).catch(
-		function(aCaught) {
-			var rejObj = {
-				name: 'promise_getICGenWorker',
-				aCaught: aCaught
-			};
-			console.error('Caught - promise_getICGenWorker - ', rejObj);
-		}
-	);
+	startMainWorker();
 	
 	// register about page
 	aboutFactory_iconcontainergenerator = new AboutFactory(AboutIconContainerGenerator);
@@ -379,11 +362,8 @@ function startup(aData, aReason) {
 function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) { return }
 	
-	if (ICGenWorker) {
-		ICGenWorker.terminate();
-		delete bootstrap.ICGenWorker;
-		console.error('terminated');
-	}
+	// terminate worker if its running
+	termMainWorker();
 	
 	console.error('should have terminated');
 	// an issue with this unload is that framescripts are left over, i want to destory them eventually

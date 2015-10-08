@@ -86,21 +86,6 @@ self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransf
 	self.postMessage(aPostMessageArr, aPostMessageTransferList);
 };
 
-function testWK() {
-	console.log('in testWK');
-	// start return sync test
-	// return ['arg1', 'arg2'];
-	// start returning promise test
-	var mainDeferred_testWK = new Deferred();
-	
-	setTimeout(function() {
-		console.log('timer up will resolve deferred');
-		mainDeferred_testWK.resolve(['resd arg1', 'resd arg2']);
-	}, 1000);
-	
-	return mainDeferred_testWK.promise;
-}
-
 ////// end of imports and definitions
 function init(objCore) {
 	//console.log('in worker init');
@@ -139,12 +124,6 @@ function init(objCore) {
 	console.log('init worker done');
 	
 	self.postMessage(['init']);
-	
-	setTimeout(function() {
-		self.postMessageWithCallback(['testMT'], function() {
-			console.log('back in worker cb with arguments:', JSON.stringify(arguments));
-		});
-	}, 5000);
 }
 
 // Start - Addon Functionality

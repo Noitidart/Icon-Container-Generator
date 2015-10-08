@@ -59,10 +59,6 @@ var bootstrapCallbacks = {
 		};
 		
 		return deferredMain_loadImg.promise;
-	},
-	testSettingCbInServer: function(gotArg1) {
-		console.log('in testSettingCbInServer gotArg1:', gotArg1);
-		return ['testSettingCbInServer fs side is sending to ps THIS'];
 	}
 };
 // end - functionalities
@@ -135,10 +131,6 @@ var bootstrapMsgListener = {
 	}
 };
 contentMMFromContentWindow_Method2(content).addMessageListener(core.addon.id, bootstrapMsgListener);
-
-sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(content), core.addon.id, ['testSettingCbInFramescript', 'ARG1'], bootstrapMsgListener.funcScope, function(aRetArg1){
-	console.log('back in framescript side callback aRetArg1:', aRetArg1);
-});
 // end - comm layer with server
 
 // start - load unload stuff
