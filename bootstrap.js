@@ -162,7 +162,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			aBrowser.setAttribute('remote', 'true');
 			aBrowser.setAttribute('type', 'content');
 			aBrowser.setAttribute('style', 'height:100px;border:10px solid steelblue;');
-			aBrowser.setAttribute('src', 'data:text/html,back to content');
+			// aBrowser.setAttribute('src', 'data:text/html,back to content');
 			
 			ICGenWorkerFuncs.fwInstances[aId] = {
 				browser: aBrowser,

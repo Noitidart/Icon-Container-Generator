@@ -142,11 +142,13 @@ function fsUnloaded() {
 }
 function onPageReady(aEvent) {
 	var aContentWindow = aEvent.target.defaultView;
-	console.error('fsReturnIconset.js page ready, content.location:', content.location, 'aContentWindow.location:', aContentWindow.location);
+	console.info('domcontentloaded time:', (new Date().getTime() - timeStart1.getTime()));
+	console.error('fsReturnIconset.js page ready, content.location:', content.location.href, 'aContentWindow.location:', aContentWindow.location.href);
 	contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['frameworkerReady']);
 }
 
 addEventListener('unload', fsUnloaded, false);
+var timeStart1 = new Date();
 addEventListener('DOMContentLoaded', onPageReady, false);
-console.error('added DOMContentLoaded event, current location is:', content.location);
+console.error('added DOMContentLoaded event, current location is:', content.location.href);
 // end - load unload stuff
