@@ -443,7 +443,9 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	// start - globals for steps
 	var fwId;
 	var destroyFrameworker; // step0 sets this to a function i call to clean up
-	var imgPathData = {}; //keys are image path, and value is object holding data
+	var imgPathData = {}; //keys are image path, and value is object holding data, this is for all, badge and base combined
+	var imgPathData_base = {}; //keys are image path, and value is reference to entry in imgPathData
+	var imgPathData_badge = {}; //keys are image path, and value is reference to entry in imgPathData
 	// end - globals for steps
 	
 	var step0 = function() {
@@ -467,6 +469,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		// send message to mainthread for each image path, mainthread should load it into an <img> and then send back arraybuffer, with height and width. or if onabort or onerror of image load it should tell us why. but leave the checking for square and etc to chromeworker after it receives it
 			// mainthread will create <img> then after load create canvas, then getImageData, then transfer back arrbuf with height and width
 			// this step1 will check if error or abort on image load, and if so it aborts the process
+				// else it puts it into imgPathData
 		var promiseAllArr_loadImgAndGetImgDatas = [];
 		
 		for (var i=0; i<aBaseSrcImgPathArr.length; i++) {
@@ -499,12 +502,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			function(aVal) {
 				console.log('Fullfilled - promiseAll_loadImgAndGetImgDatas - ', aVal);
 				// start - do stuff here - promiseAll_loadImgAndGetImgDatas
-				// check image dimensions and push to obj
-				self.postMessage(['destroyFrameworker', fwId]);
-				deferredMain_returnIconset.resolve([{
-					status: 'ok',
-					reason: 'temporary resolve for now'
-				}])
+				step2();
 				// end - do stuff here - promiseAll_loadImgAndGetImgDatas
 			},
 			function(aReason) {
@@ -533,13 +531,46 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	
 	var step2 = function() {
 		// on receive of arrbuf, height, width, error (arrbuf should be transfered back)
-			// if error cancel whole process
 			// check if square
 			// all tests pass then put base datas into base object. and badge datas into badge object, with key being size
+		
+		// check if all are sqaure
+		for (var p in imgPathData) {
+			if (imgPathData[p].w != imgPathData[p].h) {
+				self.postMessage(['destroyFrameworker', fwId]);
+				deferredMain_returnIconset.resolve([{
+					status: 'fail',
+					reason: 'Image at provided path of "' + p + '" is not square (width and height are not equal). You must supply only square images'
+				}]);
+				return;
+			}
+		}
+	
+		// ok all tests passed
+		// push to imgPathData_base and imgPathData_badge
+		for (var i=0; i<aBaseSrcImgPathArr.length; i++) {
+			imgPathData_base[aBaseSrcImgPathArr[i]] = imgPathData[aBaseSrcImgPathArr[i]];
+		}
+
+		if (aOptions.aBadgeSrcImgPathArr) {
+			for (var i=0; i<aOptions.aBadgeSrcImgPathArr.length; i++) {
+				imgPathData_badge[aOptions.aBadgeSrcImgPathArr[i]] = imgPathData[aOptions.aBadgeSrcImgPathArr[i]];
+			}
+		}
+		
+		step3();
 	};
 	
 	var step3 = function() {
 		// go through all base arrbufs and badge arrbufs, check if we have the size needed for final output, if not, then for each that we need, send message to mainthread with the arrbuf, and width and height needed (i should calc here the width and height needed based on aOptions.aScalingAlgo) ---- mainthread will make an imagedata out of it, it will make a canvas, then it will draw to it, then send back the arrbuf - and it will clean up everything on mainthread side memorywise
+		
+		/////////// working here
+		
+		self.postMessage(['destroyFrameworker', fwId]);
+		deferredMain_returnIconset.resolve([{
+			status: 'ok',
+			reason: 'temporary resolve for now'
+		}]);
 	};
 	
 	var step4 = function() {
@@ -579,6 +610,81 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	
 	return deferredMain_returnIconset.promise; // return [{status:'ok', reason:'~~made iconset~~'}];
 }
+
+function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalingAlgo) {
+	// returns key from aSourcesNameSizeObj
+	// note: assumes that all sources are that of square dimensions
+	// aSourcesNameSizeObj is a key value pair, where keys are names (full paths for example), and value is (an obj containing key "size"/"width"/"height" with value number OR number)
+	// aGoalSize is number
+	// aScalingAlgo - it first searches for perfect match, if no perfect found then:
+		// 0 - jagged first then blurry - finds the immediate larger in aSourcesNameSizeObj and will scale down, this will give the jagged look. if no larger found, then it will find the immeidate smaller then scale up, giving the blurry look.
+		// 1 - blurry first then jagged - finds the immediate smaller in aSourcesNameSizeObj and will scale up, this will give the blurry look. if no smaller found, then it will find the immeidate larger then scale down, giving the jagged look.
+	
+	var aSourcesNameSizeArr = []; // elemen is [keyName in aSourcesNameSizeObj, square size]
+	for (var p in aSourcesNameSizeObj) {
+		aSourcesNameSizeArr.push([
+			p,
+			typeof(aSourcesNameSizeObj[p]) == 'number'
+				?
+				aSourcesNameSizeObj[p]
+				:
+				(aSourcesNameSizeObj[p].size || aSourcesNameSizeObj[p].width || aSourcesNameSizeObj[p].height)
+		]);
+	}
+	
+	if (aSourcesNameSizeArr.length == 0) {
+		throw new Error('must have at least one source in aSourcesNameSizeObj');
+	}
+	
+	// sort aSourcesNameSizeArr in asc order of size asc
+	aSourcesNameSizeArr.sort(function(a, b) {
+		return a[1] > b[1];
+	});
+	
+	var nameOfSmaller; // holds key that is found in aSourcesNameSizeObj that is the immediate smaller then goal size
+	var nameOfLarger; // holds key that is found in aSourcesNameSizeObj that is the immediate larger then goal size
+	for (var i=0; i<aSourcesNameSizeArr.length; i++) {
+		if (aSourcesNameSizeArr[i][1] == aGoalSize) {
+			console.info('for goal size of', aGoalSize, 'returning exact match at name:', aSourcesNameSizeArr[i][0]);
+			return aSourcesNameSizeArr[i][0]; // return name
+		} else if (aSourcesNameSizeArr[i][1] < aGoalSize) {
+			nameOfSmaller = aSourcesNameSizeArr[i][0];
+		} else if (aSourcesNameSizeArr[i][1] > aGoalSize) {
+			nameOfLarger = aSourcesNameSizeArr[i][0];
+			break; // as otherwise it will set nameOfLarger to the largest and not the immediate larger
+		}
+	}
+				
+	switch (aScalingAlgo) {
+		case 0:
+				
+				// jagged
+				if (nameOfLarger) {
+					console.info('for goal size of', aGoalSize, 'returning jagged first because it was found. so match at name:', aSourcesNameSizeArr, 'nameOfLarger:', nameOfLarger);
+				} else {
+					console.info('for goal size of', aGoalSize, 'returning blurry second because it no larger was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
+				}
+				return nameOfLarger || nameOfSmaller; // returns immediate larger if found, else returns the immeidate smaller
+			
+			break;
+			
+		case 1:
+				
+				// blurry
+				if (nameOfSmaller) {
+					console.info('for goal size of', aGoalSize, 'returning blurry first because it was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
+				} else {
+					console.info('for goal size of', aGoalSize, 'returning jagged second because it no smaller was found. so match at name:', aSourcesNameSizeArr, 'nameOfLarger:', nameOfLarger);
+				}
+				return nameOfSmaller || nameOfLarger; // returns immediate smaller if found, else returns the immeidate larger
+			
+			break;
+		
+		default:
+			throw new Error('Unrecognized aScalingAlgo: ' + aScalingAlgo);
+	}
+}
+
 // End - Addon Functionality
 
 
