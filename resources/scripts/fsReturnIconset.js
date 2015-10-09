@@ -64,6 +64,59 @@ var bootstrapCallbacks = {
 		imgPathData[aImgPath].Image.src = aImgPath;
 		
 		return deferredMain_loadImg.promise;
+	},
+	drawScaled: function(aImgPath, aDrawAtSize) {
+		// aImgPath is one of keys in imgPathData
+		// must be square obiouvsly, i am assuming it is
+		// aDrawAtSize is what the width and height will be set to
+		// a canvas is created, and and saved in this object
+		
+		var deferredMain_drawScaled = new Deferred();
+		
+		if (!('scaleds' in imgPathData[aImgPath])) {
+			imgPathData[aImgPath].scaleds = {};
+		}
+		
+		if (!(aDrawAtSize in imgPathData[aImgPath].scaleds)) {
+			imgPathData[aImgPath].scaleds[aDrawAtSize] = {};
+			imgPathData[aImgPath].scaleds[aDrawAtSize].Can = content.document.createElement('canvas');
+			var Ctx = imgPathData[aImgPath].scaleds[aDrawAtSize].Can.getContext('2d');
+			
+			imgPathData[aImgPath].scaleds[aDrawAtSize].Can.width = aDrawAtSize;
+			imgPathData[aImgPath].scaleds[aDrawAtSize].Can.height = aDrawAtSize;
+			
+			if (aDrawAtSize == imgPathData[aImgPath].w) {
+				Ctx.drawImage(mgPathData[aImgPath].Image, 0, 0)
+			} else {
+				Ctx.drawImage(imgPathData[aImgPath].Image, 0, 0, aDrawAtSize, aDrawAtSize);
+			}
+		}
+		
+		(imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aImgPath].scaleds[aDrawAtSize].Can, function(blob) {
+			var reader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
+			reader.onloadend = function() {
+				// reader.result contains the ArrayBuffer.
+				deferredMain_drawScaled.resolve([{
+					status; 'ok',
+					arrbuf: reader.result
+				}]);
+			};
+			reader.onabort = function() {
+				deferredMain_drawScaled.resolve([{
+					status; 'fail',
+					reason: 'Abortion on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"'
+				}]);
+			};
+			reader.onerror = function() {
+				deferredMain_drawScaled.resolve([{
+					status; 'fail',
+					reason: 'Error on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"'
+				}]);
+			};
+			reader.readAsArrayBuffer(blob);
+		}, 'image/png');
+		
+		return deferredMain_drawScaled.promise;
 	}
 };
 // end - functionalities

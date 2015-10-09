@@ -603,7 +603,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					
 					var badgeX;
 					var badgeY;
-					switch (aOptions.aBadge)) {
+					switch (aOptions.aBadge) {
 						case 1:
 								
 								// top left
@@ -643,6 +643,8 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			}
 		}
 		
+		console.log('objOutputSizes:', objOutputSizes);
+		
 		step4();
 
 	};
@@ -652,12 +654,63 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		// if aOptions.saveScaledBadgeDir then send message for each badge to framworker, to send back arrbuf for it. and framworker should keep that canvas saved, as it can use that overlap the base.
 		// reason i have a whole step for this, is because i promise.all on badge. as framworker will save the badge canvas. so it can just overlap it for the output canvas when step5 sends message to create output canvas
 		if (aOptions.saveScaledBadgeDir) {
+			var promiseAllArr_drawScaledBadges = [];
+			
 			for (var p in objOutputSizes) {
 				// send message to frameworker to draw badge to canvas, and get back arr buf
 				// on promise.all then go to step5
+				var deferred_scaleBadge = new Deferred();
+				self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aBaseSrcImgPathArr].img_src, fwId], function(aP, aImgScaledResult) {
+					console.info('in callback of tellFrameworkerLoadImg in worker, the arguments are:', uneval(arguments));
+					if (aImgScaledResult.status == 'ok') {
+						deferred_scaleBadge.resolve();
+					} else {
+						if (aImgScaledResult.reason) {
+							deferred_scaleBadge.reject(aImgScaledResult.reason + ' FOR ' + aP);
+						} else {
+							deferred_scaleBadge.reject('Unknown reason FOR ' + aP);
+						}
+					}
+				}.bind(null, p));
+				promiseAllArr_drawScaledBadges.push(deferred_scaleBadge.promise);
 			}
+			
+			var promiseAll_drawScaledBadges = Promise.all(promiseAllArr_drawScaledBadges);
+			promiseAll_drawScaledBadges.then(
+				function(aVal) {
+					console.log('Fullfilled - promiseAll_drawScaledBadges - ', aVal);
+					// start - do stuff here - promiseAll_drawScaledBadges
+					setTimeout(function() {
+						// :todo: ensure that aOptions.saveScaledBadgeDir exists, else make it
+						// :todo: iterate through each objOutputSizes and write the badge arrbuf to file code here, as obviously i only ge there if aOptions.saveScaledBadgeDir was true
+					}, 0);
+					step5();
+					// end - do stuff here - promiseAll_drawScaledBadges
+				},
+				function(aReason) {
+					var rejObj = {name:'promiseAll_drawScaledBadges', aReason:aReason};
+					console.warn('Rejected - promiseAll_drawScaledBadges - ', rejObj);
+					self.postMessage(['destroyFrameworker', fwId]);
+					deferredMain_returnIconset.resolve([{
+						status: 'fail',
+						reason: aReason, // its a string message, lets show it to the user
+						aCaught: rejObj
+					}]);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promiseAll_drawScaledBadges', aCaught:aCaught};
+					console.error('Caught - promiseAll_drawScaledBadges - ', rejObj);
+					self.postMessage(['destroyFrameworker', fwId]);
+					deferredMain_returnIconset.resolve([{
+						status: 'fail',
+						reason: 'promise caught',
+						aCaught: aCaught
+					}]);
+				}
+			);
 		} else {
-			// go to step5();
+			step5();
 		}
 		
 	};
@@ -676,6 +729,14 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			// resolve promise to return back to worker RETURN POINT
 			
 		// back to worker logic: after receive all arrbufs, then go to step6
+		
+		
+		self.postMessage(['destroyFrameworker', fwId]);
+		deferredMain_returnIconset.resolve([{
+			status: 'ok',
+			reason: 'temp resolve'
+		}]);
+		
 	};
 	
 	var step6 = function() {
@@ -714,14 +775,17 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 }
 
 function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalingAlgo) {
+	// updated 10/9/2015 - this one is latest
 	// returns key from aSourcesNameSizeObj
 	// note: assumes that all sources are that of square dimensions
-	// aSourcesNameSizeObj is a key value pair, where keys are names (full paths for example), and value is (an obj containing key "size"/"width"/"height" with value number OR number)
+	// aSourcesNameSizeObj is a key value pair, where keys are names (full paths for example), and value is (an obj containing key "size"/"width"/"height" with value number OR not an obj and just number which should be square size of img, if img is not square it should not be there)
 	// aGoalSize is number
 	// aScalingAlgo - it first searches for perfect match, if no perfect found then:
 		// 0 - jagged first then blurry - finds the immediate larger in aSourcesNameSizeObj and will scale down, this will give the jagged look. if no larger found, then it will find the immeidate smaller then scale up, giving the blurry look.
 		// 1 - blurry first then jagged - finds the immediate smaller in aSourcesNameSizeObj and will scale up, this will give the blurry look. if no smaller found, then it will find the immeidate larger then scale down, giving the jagged look.
 	
+	
+	console.log('aSourcesNameSizeObj;', aSourcesNameSizeObj);
 	var aSourcesNameSizeArr = []; // elemen is [keyName in aSourcesNameSizeObj, square size]
 	for (var p in aSourcesNameSizeObj) {
 		aSourcesNameSizeArr.push([
@@ -730,7 +794,7 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 				?
 				aSourcesNameSizeObj[p]
 				:
-				(aSourcesNameSizeObj[p].size || aSourcesNameSizeObj[p].width || aSourcesNameSizeObj[p].height)
+				(aSourcesNameSizeObj[p].size || aSourcesNameSizeObj[p].width || aSourcesNameSizeObj[p].height || aSourcesNameSizeObj[p].w || aSourcesNameSizeObj[p].h)
 		]);
 	}
 	
@@ -766,6 +830,7 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 				} else {
 					console.info('for goal size of', aGoalSize, 'returning blurry second because it no larger was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
 				}
+				console.log('nameOfLarger:', nameOfLarger, 'nameOfSmaller:', nameOfSmaller);
 				return nameOfLarger || nameOfSmaller; // returns immediate larger if found, else returns the immeidate smaller
 			
 			break;

@@ -214,6 +214,14 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			deferredMain_tellFrameworkerLoadImg.resolve([aImgDataObj]);
 		});
 		return deferredMain_tellFrameworkerLoadImg.promise;
+	},
+	tellFrameworkerDrawScaled: function(aImgPath, aId) {
+		var deferredMain_tellFrameworkerDrawScaled = new Deferred();
+		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aImgPath], fsMsgListener.funcScope, function(aImgDataObj) {
+			console.log('in bootstrap callback of tellFrameworkerLoadImg, resolving');
+			deferredMain_tellFrameworkerDrawScaled.resolve([aImgDataObj]);
+		});
+		return deferredMain_tellFrameworkerDrawScaled.promise;
 	}
 	/*
 	loadImgGetImgData: function(aImgPath) {
