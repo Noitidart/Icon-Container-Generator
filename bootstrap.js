@@ -432,6 +432,7 @@ function Deferred() {
 }
 
 const SIC_CB_PREFIX = '_a_gen_cb_'; // rev6
+const SIC_TRANS_WORD = '_a_gen_trans_';
 function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core) {
 	// creates a global variable in bootstrap named workerScopeName which will hold worker, do not set up a global for it like var Blah; as then this will think something exists there
 	// aScope is the scope in which the functions are to be executed
@@ -470,7 +471,13 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 					if (rez_mainthread_call.constructor.name == 'Promise') {
 						rez_mainthread_call.then(
 							function(aVal) {
-								bootstrap[workerScopeName].postMessage([callbackPendingId, aVal]);
+								if (aVal.length > 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
+									// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+									aVal.pop();
+									bootstrap[workerScopeName].postMessage([callbackPendingId, aVal], aVal.pop());
+								} else {
+									bootstrap[workerScopeName].postMessage([callbackPendingId, aVal]);
+								}
 							},
 							function(aReason) {
 								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
@@ -482,7 +489,13 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 						);
 					} else {
 						// assume array
-						bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
+						if (rez_mainthread_call.length > 2 && rez_mainthread_call[rez_mainthread_call.length-1] == SIC_TRANS_WORD && Array.isArray(rez_mainthread_call[rez_mainthread_call.length-2])) {
+							// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+							rez_mainthread_call.pop();
+							bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call], rez_mainthread_call.pop());
+						} else {
+							bootstrap[workerScopeName].postMessage([callbackPendingId, rez_mainthread_call]);
+						}
 					}
 				}
 			}

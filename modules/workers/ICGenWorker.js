@@ -31,6 +31,7 @@ importScripts(core.addon.path.content + 'modules/ctypes_math.jsm');
 	// to call a function in the main thread function scope (which was determiend on SICWorker call from mainthread) from worker, so self.postMessage with array, with first element being the name of the function to call in mainthread, and the reamining being the arguments
 	// the return value of the functions here, will be sent to the callback, IF, worker did worker.postWithCallback
 const SIC_CB_PREFIX = '_a_gen_cb_';
+const SIC_TRANS_WORD = '_a_gen_trans_';
 self.onmessage = function(aMsgEvent) {
 	// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 	var aMsgEventData = aMsgEvent.data;
@@ -52,7 +53,13 @@ self.onmessage = function(aMsgEvent) {
 				rez_worker_call.then(
 					function(aVal) {
 						// aVal must be array
-						self.postMessage([callbackPendingId, aVal]);
+						if (aVal.length > 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
+							// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+							aVal.pop();
+							self.postMessage([callbackPendingId, aVal], aVal.pop());
+						} else {
+							self.postMessage([callbackPendingId, aVal]);
+						}
 					},
 					function(aReason) {
 						self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
@@ -64,7 +71,14 @@ self.onmessage = function(aMsgEvent) {
 				);
 			} else {
 				// assume array
-				self.postMessage([callbackPendingId, rez_worker_call]);
+				if (rez_worker_call.length > 2 && rez_worker_call[rez_worker_call.length-1] == SIC_TRANS_WORD && Array.isArray(rez_worker_call[rez_worker_call.length-2])) {
+					// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+					rez_worker_call.pop();
+					self.postMessage([callbackPendingId, rez_worker_call], rez_worker_call.pop());
+				} else {
+					self.postMessage([callbackPendingId, rez_worker_call]);
+				}
+				
 			}
 		}
 	}
