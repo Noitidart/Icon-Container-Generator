@@ -293,6 +293,8 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		}];
 	}
 	
+	// :todo: ensure no dupliates in aOutputSizesArr
+	
 	// validate aCreatePathDir
 	if (aCreateType == createTypeLinux) {
 		if (aCreatePathDir) {
@@ -446,6 +448,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	var imgPathData = {}; //keys are image path, and value is object holding data, this is for all, badge and base combined
 	var imgPathData_base = {}; //keys are image path, and value is reference to entry in imgPathData
 	var imgPathData_badge = {}; //keys are image path, and value is reference to entry in imgPathData
+	var objOutputSizes = {}; // holds key of output size, and value is object holding what base to use and what badge to use and what size to draw it on, on the canvas
 	// end - globals for steps
 	
 	var step0 = function() {
@@ -562,33 +565,132 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	};
 	
 	var step3 = function() {
-		// go through all base arrbufs and badge arrbufs, check if we have the size needed for final output, if not, then for each that we need, send message to mainthread with the arrbuf, and width and height needed (i should calc here the width and height needed based on aOptions.aScalingAlgo) ---- mainthread will make an imagedata out of it, it will make a canvas, then it will draw to it, then send back the arrbuf - and it will clean up everything on mainthread side memorywise
+		// figures out of the proivided paths, what to use for each output size, puts this info into objOutputSizes
+			// if aOptions.saveScaledBadgeDir, it will tell frameworker to draw each badge to canvas, then send back arrbuf
+			
+		/*
+		var objOutputSizes = {
+			'key is output size': {
+				base: {
+					useKey: 'element from image to use from aBaseSrcImgPathArr', // named use key, because this will be the key value in imgPathData, // get this with whichNameToScaleFromToReachGoal
+					drawAtSize: 'same as key of objOutputSizes'
+				},
+				badge: {
+					useKey: 'elem from aOptions.aBadgeSrcImgPathArr',
+					drawAtSize: '', // the number passed as aGoalSize to whichNameToScaleFromToReachGoal
+					positionToDrawAt: '' // respects aBadge position
+				}
+			}
+		};
+		*/
 		
-		/////////// working here
+		for (var i=0; i<aOutputSizesArr.length; i++) {
+			objOutputSizes[aOutputSizesArr[i]] = {};
+			
+			objOutputSizes[aOutputSizesArr[i]].base = {};
+			objOutputSizes[aOutputSizesArr[i]].base.useKey = whichNameToScaleFromToReachGoal(imgPathData_base, aOutputSizesArr[i], aOptions.aScalingAlgo);
+			objOutputSizes[aOutputSizesArr[i]].base.drawAtSize = aOutputSizesArr[i];
+			
+			if (aOptions.aBadge) {
+				var badgeSizeNeeded = aOptions.aBadgeSizePerOutputSize[aOutputSizesArr[i]];
+				if (badgeSizeNeeded < 1) {
+					badgeSizeNeeded = Math.round(aOutputSizesArr[i] * badgeSizeNeeded);
+				}
+				if (badgeSizeNeeded > 0) {
+					objOutputSizes[aOutputSizesArr[i]].badge = {};
+					objOutputSizes[aOutputSizesArr[i]].badge.useKey = whichNameToScaleFromToReachGoal(imgPathData_badge, badgeSizeNeeded, aOptions.aScalingAlgo);
+
+					
+					var badgeX;
+					var badgeY;
+					switch (aOptions.aBadge)) {
+						case 1:
+								
+								// top left
+								badgeX = 0;
+								badgeY = 0;
+								
+							break;
+						case 2:
+								
+								// top right
+								badgeX = aOutputSizesArr[i] - badgeSizeNeeded; // assuming square badge
+								badgeY = 0;
+							
+							break;
+						case 3:
+								
+								// bottom left
+								badgeX = 0
+								badgeY = aOutputSizesArr[i] - badgeSizeNeeded; // assuming square badge
+							
+							break;
+						case 4:
+								
+								// bottom right
+								badgeX = aOutputSizesArr[i] - badgeSizeNeeded; // assuming square badge // not assuming sqaure can though, just for future in case i support non square
+								badgeY = aOutputSizesArr[i] - badgeSizeNeeded; // assuming square badge // not assuming square can though, just for future in case in case i support non square
+							
+							break;
+						default:
+							// this will never happen
+							console.error('this will never happen because i ensured this in the validation section at start of this function');
+					}
+					
+					objOutputSizes[aOutputSizesArr[i]].badge.x = badgeX;
+					objOutputSizes[aOutputSizesArr[i]].badge.y = badgeY;
+				}
+			}
+		}
 		
-		self.postMessage(['destroyFrameworker', fwId]);
-		deferredMain_returnIconset.resolve([{
-			status: 'ok',
-			reason: 'temporary resolve for now'
-		}]);
+		step4();
+
 	};
 	
 	var step4 = function() {
-		// check if aOptions.saveScaledBadgeDir and aOptions.saveScaledBaseDir are set, if they are then save them to directories
+		
+		// if aOptions.saveScaledBadgeDir then send message for each badge to framworker, to send back arrbuf for it. and framworker should keep that canvas saved, as it can use that overlap the base.
+		// reason i have a whole step for this, is because i promise.all on badge. as framworker will save the badge canvas. so it can just overlap it for the output canvas when step5 sends message to create output canvas
+		if (aOptions.saveScaledBadgeDir) {
+			for (var p in objOutputSizes) {
+				// send message to frameworker to draw badge to canvas, and get back arr buf
+				// on promise.all then go to step5
+			}
+		} else {
+			// go to step5();
+		}
+		
 	};
 	
 	var step5 = function() {
-		// if badge is needed, the base and badges were already sized so just pick the one needed and send to mainthread, tell it where to place the badge on base ----- mainthread will badge it, then send back arrbuf
+		// if aOptions.saveScaledBadgeDir, then get write all the arrBuf's for badges from step4 to file. do this while frameworker is drawing bases to canvas and creating ouput canvases
+		
+		// tell frameworker to draw each base on a canvas.
+		// this is frameworker logic:
+			// if (!aOptions.aBadge)
+				// get arrbuf, set key as output
+			// else
+				// if aOptions.saveScaledBaseDir, then get arrbuf of each base canvas, and save to key as base
+				// overlap badge (of course if was getting arrbuf in previous line, then wait for that to finish)
+				// get arrbuf again and save to key as output
+			// resolve promise to return back to worker RETURN POINT
+			
+		// back to worker logic: after receive all arrbufs, then go to step6
 	};
 	
 	var step6 = function() {
-		// if aOptions.saveScaledIconDir then save them
+		// if aOptions.saveScaledBaseDir then
+			// if base keys, then save those to disk
+			// else no base keys, that means output == base. so duplicate output, and save them
+		// if aOptions.saveScaledIconDir then duplicate arrbuf, and save them. duplicate it because the arrbuf is needed for processing per aCreateType later on
+		
+		// set to step7 which does the makeIconContainer per aCreateType
 	};
 	
 	var step7 = function() {
 		// if aOptions.dontMakeIconContainer is true, then quit with message success
-		// else if aOptions.dontMakeIconContainer is false then
-			// do ICNS, ICO, Linux specific stuff
+		// else if aOptions.dontMakeIconContainer is false then initiate make icon container per aCreateType
+			// meaning do ICNS, ICO, Linux, etc specific stuff
 	};
 	
 	var step8 = function() {
