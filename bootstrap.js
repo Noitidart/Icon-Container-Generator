@@ -178,7 +178,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			aBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fsReturnIconset.js', false);			
 			
 			// ICGenWorkerFuncs.fwInstances[aId].browser.messageManager.IconContainerGenerator_id = aId; // doesnt work
-			// console.error('ICGenWorkerFuncs.fwInstances[aId].browser.messageManager:', ICGenWorkerFuncs.fwInstances[aId].browser.messageManager);
+			// console.log('ICGenWorkerFuncs.fwInstances[aId].browser.messageManager:', ICGenWorkerFuncs.fwInstances[aId].browser.messageManager);
 			
 		};
 		
@@ -199,7 +199,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 		// var aTimer = Cc['@mozilla.org/timer;1'].createInstance(Ci.nsITimer);
 		// aTimer.initWithCallback({
 			// notify: function() {
-					console.error('will now destory remote browser, i hope this will trigger the framescript unload event, because that removes the listener, otherwise i think that the attached message listener from that framescript stays alive somehow');
+					console.log('will now destory remote browser, i hope this will trigger the framescript unload event, because that removes the listener, otherwise i think that the attached message listener from that framescript stays alive somehow');
 					ICGenWorkerFuncs.fwInstances[aId].browser.parentNode.removeChild(ICGenWorkerFuncs.fwInstances[aId].browser); // im hoping this triggers the unload event on framescript
 					delete ICGenWorkerFuncs.fwInstances[aId];
 			// }
@@ -215,11 +215,18 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 		});
 		return deferredMain_tellFrameworkerLoadImg.promise;
 	},
-	tellFrameworkerDrawScaled: function(aImgPath, aId) {
+	tellFrameworkerDrawScaled: function(aImgPath, aDrawAtSize, aId) {
 		var deferredMain_tellFrameworkerDrawScaled = new Deferred();
-		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aImgPath], fsMsgListener.funcScope, function(aImgDataObj) {
+		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['drawScaled', aImgPath, aDrawAtSize], fsMsgListener.funcScope, function(aImgDataObj) {
 			console.log('in bootstrap callback of tellFrameworkerLoadImg, resolving');
-			deferredMain_tellFrameworkerDrawScaled.resolve([aImgDataObj]);
+			var resolveWithArr = [aImgDataObj];
+			if (aImgDataObj.arrbuf) {
+				resolveWithArr.push([aImgDataObj.arrbuf]);
+				resolveWithArr.push(SIC_TRANS_WORD);
+			}
+			console.log('ok from callback will transfer arrbuf, it is currently:', aImgDataObj.arrbuf.byteLength)
+			deferredMain_tellFrameworkerDrawScaled.resolve(resolveWithArr);
+			console.log('ok from callback should have transferred arrbuf should now be 0 it is:', aImgDataObj.arrbuf.byteLength);
 		});
 		return deferredMain_tellFrameworkerDrawScaled.promise;
 	}
@@ -288,7 +295,7 @@ function startMainWorker() {
 				name: 'promise_getICGenWorker',
 				aCaught: aCaught
 			};
-			console.error('Caught - promise_getICGenWorker - ', rejObj);
+			console.log('Caught - promise_getICGenWorker - ', rejObj);
 		}
 	);
 }
@@ -297,7 +304,7 @@ function termMainWorker() {
 	if (ICGenWorker) {
 		ICGenWorker.terminate();
 		delete bootstrap.ICGenWorker;
-		console.error('terminated');
+		console.log('terminated');
 	}
 }
 
@@ -308,7 +315,7 @@ var fsMsgListener = {
 	funcScope: fsFuncs,
 	receiveMessage: function(aMsgEvent) {
 		var aMsgEventData = aMsgEvent.data;
-		console.error('fsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
+		console.log('fsMsgListener getting aMsgEventData:', aMsgEventData, 'aMsgEvent:', aMsgEvent);
 		// aMsgEvent.data should be an array, with first item being the unfction name in bootstrapCallbacks
 		
 		var callbackPendingId;
@@ -335,7 +342,7 @@ var fsMsgListener = {
 						}
 					).catch(
 						function(aCatch) {
-							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
 						}
 					);
 				} else {
@@ -378,7 +385,7 @@ function shutdown(aData, aReason) {
 	// terminate worker if its running
 	termMainWorker();
 	
-	console.error('should have terminated');
+	console.log('should have terminated');
 	// an issue with this unload is that framescripts are left over, i want to destory them eventually
 	aboutFactory_iconcontainergenerator.unregister();
 	
@@ -423,7 +430,7 @@ function Deferred() {
 			}.bind(this));
 			Object.freeze(this);
 		} catch (ex) {
-			console.error('Promise not available!', ex);
+			console.log('Promise not available!', ex);
 			throw new Error('Promise not available!');
 		}
 	} else {
@@ -433,6 +440,7 @@ function Deferred() {
 
 const SIC_CB_PREFIX = '_a_gen_cb_'; // rev6
 const SIC_TRANS_WORD = '_a_gen_trans_';
+var sic_last_cb_id = -1;
 function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core) {
 	// creates a global variable in bootstrap named workerScopeName which will hold worker, do not set up a global for it like var Blah; as then this will think something exists there
 	// aScope is the scope in which the functions are to be executed
@@ -471,8 +479,9 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 					if (rez_mainthread_call.constructor.name == 'Promise') {
 						rez_mainthread_call.then(
 							function(aVal) {
-								if (aVal.length > 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
+								if (aVal.length >= 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
 									// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
+									console.error('doing transferrrrr');
 									aVal.pop();
 									bootstrap[workerScopeName].postMessage([callbackPendingId, aVal], aVal.pop());
 								} else {
@@ -484,7 +493,7 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 							}
 						).catch(
 							function(aCatch) {
-								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
 							}
 						);
 					} else {
@@ -519,7 +528,8 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 		// var lastCallbackId = -1; // dont do this, in case multi SICWorker's are sharing the same aFuncExecScope so now using new Date().getTime() in its place // link8888881
 		bootstrap[workerScopeName].postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
 			// lastCallbackId++; // link8888881
-			var thisCallbackId = SIC_CB_PREFIX + new Date().getTime(); // + lastCallbackId; // link8888881
+			sic_last_cb_id++;
+			var thisCallbackId = SIC_CB_PREFIX + sic_last_cb_id; // + lastCallbackId; // link8888881
 			aFuncExecScope[thisCallbackId] = function() {
 				delete aFuncExecScope[thisCallbackId];
 				// console.log('in mainthread callback trigger wrap, will apply aCB with these arguments:', arguments, 'turned into array:', Array.prototype.slice.call(arguments));
@@ -542,8 +552,10 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 }
 
 const SAM_CB_PREFIX = '_sam_gen_cb_';
+var sam_last_cb_id = -1;
 function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
-	var thisCallbackId = SAM_CB_PREFIX + new Date().getTime();
+	sam_last_cb_id++;
+	var thisCallbackId = SAM_CB_PREFIX + sam_last_cb_id;
 	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap;
 	aCallbackScope[thisCallbackId] = function(aMessageArr) {
 		delete aCallbackScope[thisCallbackId];

@@ -26,7 +26,7 @@ var imgPathData = {}; //keys are image path, and value is object holding data
 var bootstrapCallbacks = {
 	loadImg: function(aImgPath) {
 		// aImgPath must be file uri, or chrome path, or http NOT os path
-		console.error('in loadImg');
+		console.log('in loadImg');
 		
 		var deferredMain_loadImg = new Deferred();
 		
@@ -70,7 +70,7 @@ var bootstrapCallbacks = {
 		// must be square obiouvsly, i am assuming it is
 		// aDrawAtSize is what the width and height will be set to
 		// a canvas is created, and and saved in this object
-		
+		console.error('in drawScaled, arguments:', aImgPath, aDrawAtSize);
 		var deferredMain_drawScaled = new Deferred();
 		
 		if (!('scaleds' in imgPathData[aImgPath])) {
@@ -97,19 +97,19 @@ var bootstrapCallbacks = {
 			reader.onloadend = function() {
 				// reader.result contains the ArrayBuffer.
 				deferredMain_drawScaled.resolve([{
-					status; 'ok',
+					status: 'ok',
 					arrbuf: reader.result
 				}]);
 			};
 			reader.onabort = function() {
 				deferredMain_drawScaled.resolve([{
-					status; 'fail',
+					status: 'fail',
 					reason: 'Abortion on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"'
 				}]);
 			};
 			reader.onerror = function() {
 				deferredMain_drawScaled.resolve([{
-					status; 'fail',
+					status: 'fail',
 					reason: 'Error on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"'
 				}]);
 			};
@@ -162,7 +162,7 @@ function Deferred() {
 		}.bind(this));
 		Object.freeze(this);
 	} catch (ex) {
-		console.error('Promise not available!', ex);
+		console.log('Promise not available!', ex);
 		throw new Error('Promise not available!');
 	}
 }
@@ -171,8 +171,10 @@ function Deferred() {
 
 // start - comm layer with server
 const SAM_CB_PREFIX = '_sam_gen_cb_';
+var sam_last_cb_id = -1;
 function sendAsyncMessageWithCallback(aMessageManager, aGroupId, aMessageArr, aCallbackScope, aCallback) {
-	var thisCallbackId = SAM_CB_PREFIX + new Date().getTime();
+	sam_last_cb_id++;
+	var thisCallbackId = SAM_CB_PREFIX + sam_last_cb_id;
 	aCallbackScope = aCallbackScope ? aCallbackScope : bootstrap; // todo: figure out how to get global scope here, as bootstrap is undefined
 	aCallbackScope[thisCallbackId] = function(aMessageArr) {
 		delete aCallbackScope[thisCallbackId];
@@ -210,7 +212,7 @@ var bootstrapMsgListener = {
 						}
 					).catch(
 						function(aCatch) {
-							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
+							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
 						}
 					);
 				} else {
@@ -229,19 +231,19 @@ contentMMFromContentWindow_Method2(content).addMessageListener(core.addon.id, bo
 // start - load unload stuff
 function fsUnloaded() {
 	// framescript on unload
-	console.error('fsReturnIconset.js framworker unloading');
+	console.log('fsReturnIconset.js framworker unloading');
 	contentMMFromContentWindow_Method2(content).removeMessageListener(core.addon.id, bootstrapMsgListener); // framescript comm
 
 }
 function onPageReady(aEvent) {
 	var aContentWindow = aEvent.target.defaultView;
 	console.info('domcontentloaded time:', (new Date().getTime() - timeStart1.getTime()));
-	console.error('fsReturnIconset.js page ready, content.location:', content.location.href, 'aContentWindow.location:', aContentWindow.location.href);
+	console.log('fsReturnIconset.js page ready, content.location:', content.location.href, 'aContentWindow.location:', aContentWindow.location.href);
 	contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, ['frameworkerReady']);
 }
 
 addEventListener('unload', fsUnloaded, false);
 var timeStart1 = new Date();
 addEventListener('DOMContentLoaded', onPageReady, false);
-console.error('added DOMContentLoaded event, current location is:', content.location.href);
+console.log('added DOMContentLoaded event, current location is:', content.location.href);
 // end - load unload stuff

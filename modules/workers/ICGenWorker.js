@@ -7,6 +7,7 @@ importScripts('resource://gre/modules/workers/require.js');
 // console.error('child_process:', child_process);
 
 // Globals
+var dummy = 0;
 var core = { // have to set up the main keys that you want when aCore is merged from mainthread in init
 	addon: {
 		path: {
@@ -32,6 +33,7 @@ importScripts(core.addon.path.content + 'modules/ctypes_math.jsm');
 	// the return value of the functions here, will be sent to the callback, IF, worker did worker.postWithCallback
 const SIC_CB_PREFIX = '_a_gen_cb_';
 const SIC_TRANS_WORD = '_a_gen_trans_';
+var sic_last_cb_id = -1;
 self.onmessage = function(aMsgEvent) {
 	// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 	var aMsgEventData = aMsgEvent.data;
@@ -53,7 +55,7 @@ self.onmessage = function(aMsgEvent) {
 				rez_worker_call.then(
 					function(aVal) {
 						// aVal must be array
-						if (aVal.length > 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
+						if (aVal.length >= 2 && aVal[aVal.length-1] == SIC_TRANS_WORD && Array.isArray(aVal[aVal.length-2])) {
 							// to transfer in callback, set last element in arr to SIC_TRANS_WORD and 2nd to last element an array of the transferables									// cannot transfer on promise reject, well can, but i didnt set it up as probably makes sense not to
 							aVal.pop();
 							self.postMessage([callbackPendingId, aVal], aVal.pop());
@@ -66,7 +68,7 @@ self.onmessage = function(aMsgEvent) {
 					}
 				).catch(
 					function(aCatch) {
-						self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
+						self.postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
 					}
 				);
 			} else {
@@ -90,7 +92,8 @@ self.onmessage = function(aMsgEvent) {
 self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransferList) {
 	var aFuncExecScope = WORKER;
 	
-	var thisCallbackId = SIC_CB_PREFIX + new Date().getTime();
+	sic_last_cb_id++;
+	var thisCallbackId = SIC_CB_PREFIX + sic_last_cb_id;
 	aFuncExecScope[thisCallbackId] = function() {
 		delete aFuncExecScope[thisCallbackId];
 		console.log('in worker callback trigger wrap, will apply aCB with these arguments:', uneval(arguments));
@@ -391,6 +394,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				}];
 			}
 		}
+		/* - its ok to have extras - besides theres a bug in here i think, i fixed arr to be [aOutputSizesArr.indexOf(parseInt(aOutputSize))] but havent verified it
 		// ensure there are no extras in aOptions.aBadgeSizePerOutputSize
 		// also ensures that the values are parseFloat'ed
 		for (var aOutputSize in aOptions.aBadgeSizePerOutputSize) {
@@ -400,8 +404,9 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					reason: 'aOptions.aBadgeSizePerOutputSize contains an icon size of "' + aOutputSize + '" HOWEVER this size was not found in your aOutputSizesArr, you must either include this size in aOutputSizesArr or exclude it from aOptions.aBadgeSizePerOutputSize'
 				}];
 			}
-			aOutputSizesArr[aOutputSize] = parseFloat(aOutputSizesArr[aOutputSize]);
+			aOutputSizesArr[aOutputSizesArr.indexOf(parseInt(aOutputSize))] = parseFloat(aOutputSizesArr[aOutputSizesArr.indexOf(parseInt(aOutputSize))]);
 		}
+		*/
 		
 		// make sure saveScaledBaseDir is not blank if its set
 		if (aOptions.saveScaledBaseDir === '') {
@@ -489,6 +494,23 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				// else it puts it into imgPathData
 		var promiseAllArr_loadImgAndGetImgDatas = [];
 		
+		var tellFrameworkerLoadImgCallback = function(aProvidedPath, aDeferred_loadImage, aImgInfoObj) {
+			console.info('in callback of tellFrameworkerLoadImgCallback in worker, the arguments are:', uneval(arguments));
+			if (aImgInfoObj.status == 'img-ok') {
+				imgPathData[aProvidedPath].w = aImgInfoObj.w;
+				imgPathData[aProvidedPath].h = aImgInfoObj.h;
+				aDeferred_loadImage.resolve();
+			} else {
+				if (aImgInfoObj.status == 'img-abort') {
+					aDeferred_loadImage.reject('<img> load was aborted on provided path "' + aProvidedPath + '"');
+				} else if (aImgInfoObj.status == 'img-error') {
+					aDeferred_loadImage.reject('Error on loading <img>, it may not be a real image file, for provided path "' + aProvidedPath + '"');
+				} else {
+					aDeferred_loadImage.reject('Failed to load <img> for unknown reason for provided path "' + aProvidedPath + '"');
+				}
+			}
+		};
+		
 		for (var i=0; i<aBaseSrcImgPathArr.length; i++) {
 			if ((aBaseSrcImgPathArr[i] in imgPathData)) { continue }
 			
@@ -496,22 +518,19 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			imgPathData[aBaseSrcImgPathArr[i]].img_src = aBaseSrcImgPathArr[i].indexOf('://') > -1 ? aBaseSrcImgPathArr[i] : OS.Path.toFileURI(aBaseSrcImgPathArr[i]); // if path is a os path, convert it to file uri // :todo: add verification if not file uri and if not then convert. must be chrome:// resource:// http(s):// or file:// // so here i am guessing if it has no `://` then it is os path, so i convert it
 			var deferred_loadImage = new Deferred();
 			promiseAllArr_loadImgAndGetImgDatas.push(deferred_loadImage.promise);
-			self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aBaseSrcImgPathArr].img_src, fwId], function(aIInBaseSrcArr, aImgInfoObj) {
-				console.info('in callback of tellFrameworkerLoadImg in worker, the arguments are:', uneval(arguments));
-				if (aImgInfoObj.status == 'img-ok') {
-					imgPathData[aBaseSrcImgPathArr[aIInBaseSrcArr]].w = aImgInfoObj.w;
-					imgPathData[aBaseSrcImgPathArr[aIInBaseSrcArr]].h = aImgInfoObj.h;
-					deferred_loadImage.resolve();
-				} else {
-					if (aImgInfoObj.status == 'img-abort') {
-						deferred_loadImage.reject('<img> load was aborted on path "' + aBaseSrcImgPathArr[aIInBaseSrcArr] + '"');
-					} else if (aImgInfoObj.status == 'img-error') {
-						deferred_loadImage.reject('Error on loading <img>, it may not be a real image file, for path "' + aBaseSrcImgPathArr[aIInBaseSrcArr] + '"');
-					} else {
-						deferred_loadImage.reject('Failed to load <img> for unknown reason for path "' + aBaseSrcImgPathArr[aIInBaseSrcArr] + '"');
-					}
-				}
-			}.bind(null, i));
+			self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aBaseSrcImgPathArr].img_src, fwId], tellFrameworkerLoadImgCallback.bind(null, aBaseSrcImgPathArr[i], deferred_loadImage));
+		}
+		
+		if (aOptions.aBadge) {
+			for (var i=0; i<aOptions.aBadgeSrcImgPathArr.length; i++) {
+				if ((aOptions.aBadgeSrcImgPathArr[i] in imgPathData)) { continue }
+				
+				imgPathData[aOptions.aBadgeSrcImgPathArr[i]] = {};
+				imgPathData[aOptions.aBadgeSrcImgPathArr[i]].img_src = aOptions.aBadgeSrcImgPathArr[i].indexOf('://') > -1 ? aOptions.aBadgeSrcImgPathArr[i] : OS.Path.toFileURI(aOptions.aBadgeSrcImgPathArr[i]); // if path is a os path, convert it to file uri // :todo: add verification if not file uri and if not then convert. must be chrome:// resource:// http(s):// or file:// // so here i am guessing if it has no `://` then it is os path, so i convert it
+				var deferred_loadImage = new Deferred();
+				promiseAllArr_loadImgAndGetImgDatas.push(deferred_loadImage.promise);
+				self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aOptions.aBadgeSrcImgPathArr[i]].img_src, fwId], tellFrameworkerLoadImgCallback.bind(null, aOptions.aBadgeSrcImgPathArr[i], deferred_loadImage));
+			}
 		}
 		
 		var promiseAll_loadImgAndGetImgDatas = Promise.all(promiseAllArr_loadImgAndGetImgDatas);
@@ -610,9 +629,11 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				if (badgeSizeNeeded < 1) {
 					badgeSizeNeeded = Math.round(aOutputSizesArr[i] * badgeSizeNeeded);
 				}
+				// console.error('badgeSizeNeeded:', badgeSizeNeeded, aOptions.aBadgeSizePerOutputSize[aOutputSizesArr[i]])
 				if (badgeSizeNeeded > 0) {
 					objOutputSizes[aOutputSizesArr[i]].badge = {};
 					objOutputSizes[aOutputSizesArr[i]].badge.useKey = whichNameToScaleFromToReachGoal(imgPathData_badge, badgeSizeNeeded, aOptions.aScalingAlgo);
+					objOutputSizes[aOutputSizesArr[i]].badge.drawAtSize = badgeSizeNeeded;
 
 					
 					var badgeX;
@@ -674,18 +695,19 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				// send message to frameworker to draw badge to canvas, and get back arr buf
 				// on promise.all then go to step5
 				var deferred_scaleBadge = new Deferred();
-				self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aBaseSrcImgPathArr].img_src, fwId], function(aP, aImgScaledResult) {
-					console.info('in callback of tellFrameworkerLoadImg in worker, the arguments are:', uneval(arguments));
+				self.postMessageWithCallback(['tellFrameworkerDrawScaled', imgPathData[objOutputSizes[p].badge.useKey].img_src, objOutputSizes[p].badge.drawAtSize, fwId], function(aP, aDeferred_scaledBadge, aImgScaledResult) {
+					console.info('in callback of tellFrameworkerDrawScaled in worker, the arguments are:', uneval(arguments));
 					if (aImgScaledResult.status == 'ok') {
-						deferred_scaleBadge.resolve();
+						objOutputSizes[aP].badge.arrbuf = aImgScaledResult.arrbuf;
+						aDeferred_scaledBadge.resolve();
 					} else {
 						if (aImgScaledResult.reason) {
-							deferred_scaleBadge.reject(aImgScaledResult.reason + ' FOR ' + aP);
+							aDeferred_scaledBadge.reject(aImgScaledResult.reason + ' FOR ' + aP);
 						} else {
-							deferred_scaleBadge.reject('Unknown reason FOR ' + aP);
+							aDeferred_scaledBadge.reject('Unknown reason FOR ' + aP);
 						}
 					}
-				}.bind(null, p));
+				}.bind(null, p, deferred_scaleBadge));
 				promiseAllArr_drawScaledBadges.push(deferred_scaleBadge.promise);
 			}
 			
@@ -697,6 +719,10 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					setTimeout(function() {
 						// :todo: ensure that aOptions.saveScaledBadgeDir exists, else make it
 						// :todo: iterate through each objOutputSizes and write the badge arrbuf to file code here, as obviously i only ge there if aOptions.saveScaledBadgeDir was true
+						for (var p in objOutputSizes) {
+							// console.error('objOutputSizes[p].badge.arrbuf:', objOutputSizes[p].badge.arrbuf);
+							OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png'), new Uint8Array(objOutputSizes[p].badge.arrbuf), {tmpPath:OS.Path.join(OS.Constants.Path.desktopDir, 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png.tmp')});
+						}
 					}, 0);
 					step5();
 					// end - do stuff here - promiseAll_drawScaledBadges
@@ -744,7 +770,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			
 		// back to worker logic: after receive all arrbufs, then go to step6
 		
-		
+		console.error('in step5');
 		self.postMessage(['destroyFrameworker', fwId]);
 		deferredMain_returnIconset.resolve([{
 			status: 'ok',
@@ -844,7 +870,7 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 				} else {
 					console.info('for goal size of', aGoalSize, 'returning blurry second because it no larger was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
 				}
-				console.log('nameOfLarger:', nameOfLarger, 'nameOfSmaller:', nameOfSmaller);
+				// console.log('nameOfLarger:', nameOfLarger, 'nameOfSmaller:', nameOfSmaller);
 				return nameOfLarger || nameOfSmaller; // returns immediate larger if found, else returns the immeidate smaller
 			
 			break;
