@@ -266,6 +266,15 @@ var bootstrapCallbacks = {
 		//////
 		
 		return deferredMain_dSoBoOOSb.promise;
+	},
+	getImgDatasOfFinals: function(reqObj) {
+		var rezObj = {}; // key is output size, value is image data arrbuf
+		for (var i=0; i<reqObj.length; i++) {
+			var providedImgPath = reqObj[i].aProvidedPath;
+			var outputSize = reqObj[i].aOutputSize;
+			rezObj[outputSize] = imgPathData[providedImgPath].scaleds[outputSize].Can.getContext('2d').getImageData(0, 0, outputSize, outputSize).data.buffer;
+		}
+		return [rezObj];
 	}
 };
 

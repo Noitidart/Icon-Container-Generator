@@ -824,8 +824,6 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		
 		console.error('step6, objOutputSizes:', objOutputSizes);
 		
-		self.postMessage(['destroyFrameworker', fwId]); // no more need for frameworker, destrooy it
-		
 		if (aOptions.saveScaledBaseDir) {
 			setTimeout(function() {
 				// :todo: ensure aOptions.saveScaledBaseDir exists, if not then create it
@@ -855,30 +853,245 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			}, 0);
 		}
 		
-		deferredMain_returnIconset.resolve([{
-			status: 'ok',
-			reason: 'temp resolve'
-		}]);
+		step7();
 	};
 	
 	var step7 = function() {
 		// if aOptions.dontMakeIconContainer is true, then quit with message success
 		// else if aOptions.dontMakeIconContainer is false then initiate make icon container per aCreateType
 			// meaning do ICNS, ICO, Linux, etc specific stuff
+		if (aOptions.dontMakeIconContainer) {
+			self.postMessage(['destroyFrameworker', fwId]); // no more need for frameworker, destrooy it
+			deferredMain_returnIconset.resolve([{
+				status: 'ok',
+				reason: 'because no make icon container, the process is really done'
+			}]);
+		} else {
+			step8();
+		}
 	};
 	
 	var step8 = function() {
 		// do ICNS, ICO, Linux specific stuff
-		if (aCreateType == createTypeLinux) {
-			// :todo: turn aCreatePathDir into an object with key being size (square of course) of final output icons, and paths to the respective system folder to output the png's/svg to
-			// :todo; offer aOption.sudoPassword if they do that then i should write to root/share/icons. but for now and default is to write to user_home/share/icons FOR NON-QT so meaning for gtk
-			// aCreatePathDir = {}; // already made into an object in validation section above
-			if (core.os.toolkit.indexOf('gtk') == 0) {
-				// populate aCreatePathDir, which is now an object, with key of icon size, and value of path to write it in
-			} else {
-				// its QT
-				// not yet supported, validation section above will throw
-			}
+		switch (aCreateType) {
+			case createTypeLinux:
+				
+					self.postMessage(['destroyFrameworker', fwId]); // no more need for frameworker, destrooy it
+					// :todo: turn aCreatePathDir into an object with key being size (square of course) of final output icons, and paths to the respective system folder to output the png's/svg to
+					// :todo; offer aOption.sudoPassword if they do that then i should write to root/share/icons. but for now and default is to write to user_home/share/icons FOR NON-QT so meaning for gtk
+					// aCreatePathDir = {}; // already made into an object in validation section above
+					if (core.os.toolkit.indexOf('gtk') == 0) {
+						// populate aCreatePathDir, which is now an object, with key of icon size, and value of path to write it in
+					} else {
+						// its QT
+						// not yet supported, validation section above will throw
+					}
+				
+				break;
+			case createTypeIco:
+				
+					// start - put imageDataArr to ico container, as buffer
+					// start - ico make proc
+					
+					var step8_1 = function() {
+						// get image datas for all the canvases
+						var reqObj = []; // key is the key in fsReturnIconset imgPathData that was used for output. and value is the size of output. so Can output is imgPathData[$k].scaleds[$v]
+						for (var i=0; i<aOutputSizesArr.length; i++) {
+							reqObj.push(
+								{
+									aProvidedPath: objOutputSizes[aOutputSizesArr[i]].base.useKey,
+									aOutputSize: aOutputSizesArr[i]
+								}
+							);
+						}
+						self.postMessageWithCallback(['tellFrameworkerGetImgDatasOfFinals', reqObj, fwId], function(aObjOfBufs) {
+							self.postMessage(['destroyFrameworker', fwId]); // no more need for frameworker, destrooy it
+							
+							for (var p in aObjOfBufs) {
+								objOutputSizes[p].getImageData = new Uint8ClampedArray(aObjOfBufs[p]);
+							}
+							
+							console.error('ok added in the getImageDatas to objOutputSizes:', objOutputSizes);
+							
+							step8_2();
+						});
+					};
+					
+					var step8_2 = function() {
+						console.error('in step2');
+						var icoDataArr = [];
+						for (var p in objOutputSizes) {
+							icoDataArr.push(objOutputSizes[p])
+						}
+						icoDataArr.sort(function(a, b) {
+							return a.base.drawAtSize > b.base.drawAtSize;
+						});
+						
+						console.error('icoDataArr:', icoDataArr);
+
+						console.time('ico-make');
+						var sizeof_ICONDIR = 6;
+						var sizeof_ICONDIRENTRY = 16;
+						var sizeof_BITMAPHEADER = 40;
+						var sizeof_ICONIMAGEs = 0;
+						
+						for (var i=0; i<icoDataArr.length; i++) {
+							icoDataArr[i].XOR = icoDataArr[i].getImageData.length;
+							icoDataArr[i].AND = icoDataArr[i].base.drawAtSize * icoDataArr[i].base.drawAtSize / 8;
+							sizeof_ICONIMAGEs += icoDataArr[i].XOR;
+							sizeof_ICONIMAGEs += icoDataArr[i].AND;
+							sizeof_ICONIMAGEs += sizeof_BITMAPHEADER;
+							icoDataArr[i].sizeof_ICONIMAGE = icoDataArr[i].XOR + icoDataArr[i].AND + sizeof_BITMAPHEADER;
+						}
+						
+						// let XOR = data.length;
+						// let AND = canvas.width * canvas.height / 8;
+						// let csize = 22 /* ICONDIR + ICONDIRENTRY */ + 40 /* BITMAPHEADER */ + XOR + AND;
+						var csize = sizeof_ICONDIR + (sizeof_ICONDIRENTRY * icoDataArr.length) + sizeof_ICONIMAGEs;
+						var buffer = new ArrayBuffer(csize);
+					   
+						// Every ICO file starts with an ICONDIR
+						// ICONDIR
+						/* 
+						typedef struct																	6+?
+						{
+							WORD           idReserved;   // Reserved (must be 0)						2
+							WORD           idType;       // Resource Type (1 for icons)					2
+							WORD           idCount;      // How many images?							2
+							ICONDIRENTRY   idEntries[1]; // An entry for each image (idCount of 'em)	?
+						} ICONDIR, *LPICONDIR;
+						*/
+						var lilEndian = isLittleEndian();
+						var view = new DataView(buffer);
+						//view.setUint16(0, 0, lilEndian);					//	WORD	//	idReserved	//	Reserved (must be 0) /* i commented this out because its not needed, by default the view value is 0 */
+						view.setUint16(2, 1, lilEndian);					//	WORD	//	idType		//	Resource Type (1 for icons)
+						view.setUint16(4, icoDataArr.length, lilEndian);	//	WORD	//	idCount;	// How many images?
+						
+						// There exists one ICONDIRENTRY for each icon image in the file
+						/*
+						typedef struct																16
+						{
+							BYTE        bWidth;          // Width, in pixels, of the image			1
+							BYTE        bHeight;         // Height, in pixels, of the image			1
+							BYTE        bColorCount;     // Number of colors in image (0 if >=8bpp)	1
+							BYTE        bReserved;       // Reserved ( must be 0)					1
+							WORD        wPlanes;         // Color Planes							2
+							WORD        wBitCount;       // Bits per pixel							2
+							DWORD       dwBytesInRes;    // How many bytes in this resource?		4
+							DWORD       dwImageOffset;   // Where in the file is this image?		4
+						} ICONDIRENTRY, *LPICONDIRENTRY;
+						*/
+						// ICONDIRENTRY creation for each image
+						var sumof__prior_sizeof_ICONIMAGE = 0;
+						for (var i=0; i<icoDataArr.length; i++) {
+							/*
+							var countof_ICONIMAGES_prior_to_this_ICONIMAGE = i;
+							var sizeof_ICONIMAGES_prior_to_this_ICONIMAGE = 0;
+							for (var i=0; i<countof_ICONIMAGES_prior_to_this_ICONIMAGE; i++) {
+								sizeof_ICONIMAGES_prior_to_this_ICONIMAGE += path_data[paths[i]].sizeof_ICONIMAGE;
+							}
+							*/
+							
+							view = new DataView(buffer, sizeof_ICONDIR + (sizeof_ICONDIRENTRY * i /* sum_of_ICONDIRENTRYs_before_this_one */));
+							view.setUint8(0, icoDataArr[i].base.drawAtSize % 256 /* % 256 i dont understand why the modulus?? */ );																	// BYTE        bWidth;          // Width, in pixels, of the image
+							view.setUint8(1, icoDataArr[i].base.drawAtSize % 256 /* % 256 i dont understand why the modulus?? */);																	// BYTE        bHeight;         // Height, in pixels, of the image
+							//view.setUint8(2, 0);																																					// BYTE        bColorCount;     // Number of colors in image (0 if >=8bpp)
+							//view.setUint8(3, 0);																																					// BYTE        bReserved;       // Reserved ( must be 0)
+							view.setUint16(4, 1, lilEndian);																																		// WORD        wPlanes;         // Color Planes
+							view.setUint16(6, 32, lilEndian);																																		// WORD        wBitCount;       // Bits per pixel
+							view.setUint32(8, icoDataArr[i].sizeof_ICONIMAGE /* sizeof_BITMAPHEADER + icoDataArr[i].XOR + icoDataArr[i].AND */, lilEndian);											// DWORD       dwBytesInRes;    // How many bytes in this resource?			// data size
+							view.setUint32(12, sizeof_ICONDIR + (sizeof_ICONDIRENTRY * icoDataArr.length) + sumof__prior_sizeof_ICONIMAGE /*sizeof_ICONIMAGES_prior_to_this_ICONIMAGE*/, lilEndian);		// DWORD       dwImageOffset;   // Where in the file is this image?			// data start
+							
+							sumof__prior_sizeof_ICONIMAGE += icoDataArr[i].sizeof_ICONIMAGE;
+						}
+						/*
+						typdef struct
+						{
+						   BITMAPINFOHEADER   icHeader;      // DIB header
+						   RGBQUAD         icColors[1];   // Color table
+						   BYTE            icXOR[1];      // DIB bits for XOR mask
+						   BYTE            icAND[1];      // DIB bits for AND mask
+						} ICONIMAGE, *LPICONIMAGE;
+						*/
+						// ICONIMAGE creation for each image
+						var sumof__prior_sizeof_ICONIMAGE = 0;
+						for (var i=0; i<icoDataArr.length; i++) {
+							/*
+							typedef struct tagBITMAPINFOHEADER {
+							  DWORD biSize;				4
+							  LONG  biWidth;			4
+							  LONG  biHeight;			4
+							  WORD  biPlanes;			2
+							  WORD  biBitCount;			2
+							  DWORD biCompression;		4
+							  DWORD biSizeImage;		4
+							  LONG  biXPelsPerMeter;	4
+							  LONG  biYPelsPerMeter;	4
+							  DWORD biClrUsed;			4
+							  DWORD biClrImportant;		4
+							} BITMAPINFOHEADER, *PBITMAPINFOHEADER;		40
+							*/
+							// BITMAPHEADER
+							view = new DataView(buffer, sizeof_ICONDIR + (sizeof_ICONDIRENTRY * icoDataArr.length) + sumof__prior_sizeof_ICONIMAGE);
+							view.setUint32(0, sizeof_BITMAPHEADER, lilEndian); // BITMAPHEADER size
+							view.setInt32(4, icoDataArr[i].base.drawAtSize, lilEndian);
+							view.setInt32(8, icoDataArr[i].base.drawAtSize * 2, lilEndian);
+							view.setUint16(12, 1, lilEndian); // Planes
+							view.setUint16(14, 32, lilEndian); // BPP
+							view.setUint32(20, icoDataArr[i].XOR + icoDataArr[i].AND, lilEndian); // size of data
+							
+							// Reorder RGBA -> BGRA
+							for (var ii = 0; ii < icoDataArr[i].XOR; ii += 4) {
+								var temp = icoDataArr[i].getImageData[ii];
+								icoDataArr[i].getImageData[ii] = icoDataArr[i].getImageData[ii + 2];
+								icoDataArr[i].getImageData[ii + 2] = temp;
+							}
+							var ico = new Uint8Array(buffer, sizeof_ICONDIR + (sizeof_ICONDIRENTRY * icoDataArr.length) + sumof__prior_sizeof_ICONIMAGE + sizeof_BITMAPHEADER);
+							var stride = icoDataArr[i].base.drawAtSize * 4;
+							
+							// Write bottom to top
+							for (var ii = 0; ii < icoDataArr[i].base.drawAtSize; ++ii) {
+								var su = icoDataArr[i].getImageData.subarray(icoDataArr[i].XOR - ii * stride, icoDataArr[i].XOR - ii * stride + stride);
+								ico.set(su, ii * stride);
+							}
+							
+							sumof__prior_sizeof_ICONIMAGE += icoDataArr[i].sizeof_ICONIMAGE; /*icoDataArr[i].XOR + icoDataArr[i].AND + sizeof_BITMAPHEADER;*/
+						}
+						console.timeEnd('ico-make');
+						// end - put imageDataArr to ico container, as buffer
+						
+						// write it to file
+						makeDirAutofrom(aCreatePathDir, {checkExistsFirst:true});
+						
+						try {
+							OS.File.writeAtomic(OS.Path.join(aCreatePathDir, aCreateName + '.ico'), new Uint8Array(buffer), {tmpPath:OS.Path.join(aCreatePathDir, aCreateName + '.ico.tmp')})
+						} catch (filex) {
+							deferredMain_returnIconset.resolve([{
+								status: 'fail',
+								reason: 'write atomic error, see filex in browser console',
+								filex: filex
+							}]);
+							return;
+						}
+
+						deferredMain_returnIconset.resolve([{
+							status: 'fail',
+							reason: 'succesfully created ico'
+						}]);
+						
+					};
+					
+					step8_1();
+					
+				break;
+			case createTypeIcns:
+				
+					/////
+				
+				break;
+			default:
+				// will never get here
+				console.error('will never get here');
 		}
 	};
 	
@@ -1081,4 +1294,9 @@ function makeDirAutofrom(aOSPath, aOptions={}) {
 	console.log('rez:', rez);
 }
 
+function isLittleEndian() {
+	var buffer = new ArrayBuffer(2);
+	new DataView(buffer).setInt16(0, 256, true);
+	return new Int16Array(buffer)[0] === 256;
+};
 // End - Common Functions

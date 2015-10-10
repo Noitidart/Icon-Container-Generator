@@ -248,28 +248,21 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			deferredMain_tellFrameworker_dSoBoOOSb.resolve(resolveWithArr);	
 		});
 		return deferredMain_tellFrameworker_dSoBoOOSb.promise;
-	}
-	/*
-	loadImgGetImgData: function(aImgPath) {
-		// aImgPath must be http or file uri NOT os path
-		var deferredMain_loadImgGetImgData = new Deferred();
-		
-		var img = new Services.appShell.hiddenDOMWindow.Image();
-		
-		img.onload = function() {
-			var can = Services.appShell.hiddenDOMWindow.document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
-			var ctx = 
-		};
-		img.onabort = handleImgAbort function() {
+	},
+	tellFrameworkerGetImgDatasOfFinals: function(reqObj, aId) {
+		var deferredMain_tellFrameworker_gIDOF = new Deferred();
+		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['getImgDatasOfFinals', reqObj], fsMsgListener.funcScope, function(aObjOfBufs) {
 			
-		};
-		img.onerror = handleImgError function() {
-			
-		};
-		
-		return deferredMain_loadImgGetImgData.promise;
+			var resolveWithArr = [aObjOfBufs, [], SIC_TRANS_WORD];
+			for (var p in aObjOfBufs) {
+				resolveWithArr[1].push(aObjOfBufs[p]);
+			}
+			console.log('in bootstrap callback of tellFrameworkerGetImgDatasOfFinals, resolving with:', resolveWithArr);
+
+			deferredMain_tellFrameworker_gIDOF.resolve(resolveWithArr);	
+		});
+		return deferredMain_tellFrameworker_gIDOF.promise;
 	}
-	*/
 };
 
 var fsFuncs = { // functions for framescripts to call in main thread
