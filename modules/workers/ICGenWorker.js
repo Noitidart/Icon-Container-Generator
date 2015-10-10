@@ -707,11 +707,11 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					console.log('Fullfilled - promiseAll_drawScaledBadges - ', aVal);
 					// start - do stuff here - promiseAll_drawScaledBadges
 					setTimeout(function() {
-						// :todo: ensure that aOptions.saveScaledBadgeDir exists, else make it
-						// :todo: iterate through each objOutputSizes and write the badge arrbuf to file code here, as obviously i only ge there if aOptions.saveScaledBadgeDir was true
+						makeDirAutofrom(aOptions.saveScaledBadgeDir, {checkExistsFirst:true});
+						// iterate through each objOutputSizes and write the badge arrbuf to file code here, as obviously i only ge there if aOptions.saveScaledBadgeDir was true
 						for (var p in objOutputSizes) {
 							// console.log('objOutputSizes[p].badge.arrbuf:', objOutputSizes[p].badge.arrbuf);
-							OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png'), new Uint8Array(objOutputSizes[p].badge.arrbuf), {tmpPath:OS.Path.join(OS.Constants.Path.desktopDir, 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png.tmp')});
+							OS.File.writeAtomic(OS.Path.join(aOptions.saveScaledBadgeDir, aCreateName + '-' + 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png'), new Uint8Array(objOutputSizes[p].badge.arrbuf), {tmpPath:OS.Path.join(aOptions.saveScaledBadgeDir, aCreateName + '-' + 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png.tmp')});
 						}
 					}, 0);
 					step5();
@@ -822,16 +822,39 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		
 		// set to step7 which does the makeIconContainer per aCreateType
 		
-		console.error('step6');
+		console.error('step6, objOutputSizes:', objOutputSizes);
 		
-		for (var p in objOutputSizes) {
-			OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'output_' + p + '.png'), new Uint8Array(objOutputSizes[p].arrbuf), {tmpPath:OS.Path.join(OS.Constants.Path.desktopDir, 'output_' + p + '.png.tmp')});
-			if (aOptions.saveScaledBaseDir) {
-				OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'base_' + p + '.png'), new Uint8Array(objOutputSizes[p].base.arrbuf), {tmpPath:OS.Path.join(OS.Constants.Path.desktopDir, 'base_' + p + '.png.tmp')});
-			}
+		self.postMessage(['destroyFrameworker', fwId]); // no more need for frameworker, destrooy it
+		
+		if (aOptions.saveScaledBaseDir) {
+			setTimeout(function() {
+				// :todo: ensure aOptions.saveScaledBaseDir exists, if not then create it
+				makeDirAutofrom(aOptions.saveScaledBaseDir, {checkExistsFirst:true});
+				for (var p in objOutputSizes) {
+					// objOutputSizes[p].base.arrbuf is guranteed to exist as aOptions.saveScaledBadgeDir was true
+					var targetBuf;
+					if (objOutputSizes[p].base.arrbuf) {
+						targetBuf = objOutputSizes[p].base.arrbuf;
+					} else {
+						targetBuf = objOutputSizes[p].arrbuf.slice();
+					}
+					OS.File.writeAtomic(OS.Path.join(aOptions.saveScaledBaseDir, aCreateName + '-' + 'base_' + p + '.png'), new Uint8Array(targetBuf), {tmpPath:OS.Path.join(aOptions.saveScaledBaseDir, aCreateName + '-' + 'base_' + p + '.png.tmp')});
+				}
+			}, 0);
 		}
 
-		self.postMessage(['destroyFrameworker', fwId]);
+		if (aOptions.saveScaledIconDir) {
+			setTimeout(function() {
+				// :todo: ensure aOptions.saveScaledIconDir exists, if not then create it
+				makeDirAutofrom(aOptions.saveScaledIconDir, {checkExistsFirst:true});
+				// duplicate output buffer
+				for (var p in objOutputSizes) {
+					var dupedBuffer = objOutputSizes[p].arrbuf.slice();
+					OS.File.writeAtomic(OS.Path.join(aOptions.saveScaledIconDir, aCreateName + '_' + p + '.png'), new Uint8Array(dupedBuffer), {tmpPath:OS.Path.join(aOptions.saveScaledIconDir, aCreateName + '_' + p + '.png.tmp')});
+				}
+			}, 0);
+		}
+		
 		deferredMain_returnIconset.resolve([{
 			status: 'ok',
 			reason: 'temp resolve'
@@ -1010,6 +1033,52 @@ function Deferred() {
 		console.log('Promise not available!', ex);
 		throw new Error('Promise not available!');
 	}
+}
+
+function makeDirAutofrom(aOSPath, aOptions={}) {
+	// aOSPath is path to directory you want made
+	// this functions checks if its parent exists, if it doesnt, it checks grandparent, and so on until it finds an existing. then it calls OS.File.makeDir(aOSPath, {from:FOUND_EXISTING})
+	
+	// aOptions
+		// checkExistsFirst - if set to true, it checks if the dir at aOSPath exists, if it does then it quits. else it starts finding first existing parent then does create from there.
+			// if true
+				// if aOSPath DNE - then just one call happens. OS.File.Exists
+				// if aOSPath EXISTS - then it does a minimum of 3 calls. first exist. then it checks parent exist, and assuming parent exists (just one loop here). then make dir.
+			// if false
+				// if aOSPath DNE - then minimum of 2 calls. loop check finds first parent exists, then makedir
+				// if aOSPath EXISTS - still min of 2 calls. loop check finds first parent exists, then makedir
+	var defaultOptions = {
+		checkExistsFirst: false
+	};
+	
+	// add to aOptions the defaults if a key for it was not found
+	for (var p in defaultOptions) {
+		if (!(p in defaultOptions)) {
+			aOptions[p] = defaultOptions[p];
+		}
+	}
+	
+	if (aOptions.checkExistsFirst) {
+		var itExists = OS.File.exists(aOSPath);
+		if (itExists) {
+			console.log('already existing');
+			return true;
+		}
+	}
+	
+	var aOSPath_existingDir = aOSPath;
+	var aExists;
+	while (!aExists) {
+		aOSPath_existingDir = OS.Path.dirname(aOSPath_existingDir);
+		aExists = OS.File.exists(aOSPath_existingDir);
+	}
+	
+	console.log('making from:', aOSPath_existingDir);
+	var rez = OS.File.makeDir(aOSPath, {
+		from: aOSPath_existingDir
+	});
+	
+	console.log('rez:', rez);
 }
 
 // End - Common Functions
