@@ -4,7 +4,7 @@
 importScripts('resource://gre/modules/osfile.jsm');
 importScripts('resource://gre/modules/workers/require.js');
 // var child_process = require('sdk/system/child_process');
-// console.error('child_process:', child_process);
+// console.log('child_process:', child_process);
 
 // Globals
 var dummy = 0;
@@ -64,10 +64,12 @@ self.onmessage = function(aMsgEvent) {
 						}
 					},
 					function(aReason) {
+						console.error('aReject:', aReason);
 						self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
 					}
 				).catch(
 					function(aCatch) {
+						console.error('aCatch:', aCatch);
 						self.postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
 					}
 				);
@@ -548,18 +550,18 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				deferredMain_returnIconset.resolve([{
 					status: 'fail',
 					reason: aReason, // its a string message, lets show it to the user
-					aCaught: rejObj
+					rejObj: rejObj
 				}]);
 			}
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promiseAll_loadImgAndGetImgDatas', aCaught:aCaught};
-				console.error('Caught - promiseAll_loadImgAndGetImgDatas - ', rejObj);
+				console.log('Caught - promiseAll_loadImgAndGetImgDatas - ', rejObj);
 				self.postMessage(['destroyFrameworker', fwId]);
 				deferredMain_returnIconset.resolve([{
 					status: 'fail',
 					reason: 'promise caught',
-					aCaught: aCaught
+					rejObj: rejObj
 				}]);
 			}
 		);
@@ -629,7 +631,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				if (badgeSizeNeeded < 1) {
 					badgeSizeNeeded = Math.round(aOutputSizesArr[i] * badgeSizeNeeded);
 				}
-				// console.error('badgeSizeNeeded:', badgeSizeNeeded, aOptions.aBadgeSizePerOutputSize[aOutputSizesArr[i]])
+				// console.log('badgeSizeNeeded:', badgeSizeNeeded, aOptions.aBadgeSizePerOutputSize[aOutputSizesArr[i]])
 				if (badgeSizeNeeded > 0) {
 					objOutputSizes[aOutputSizesArr[i]].badge = {};
 					objOutputSizes[aOutputSizesArr[i]].badge.useKey = whichNameToScaleFromToReachGoal(imgPathData_badge, badgeSizeNeeded, aOptions.aScalingAlgo);
@@ -669,7 +671,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 							break;
 						default:
 							// this will never happen
-							console.error('this will never happen because i ensured this in the validation section at start of this function');
+							console.log('this will never happen because i ensured this in the validation section at start of this function');
 					}
 					
 					objOutputSizes[aOutputSizesArr[i]].badge.x = badgeX;
@@ -695,19 +697,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				// send message to frameworker to draw badge to canvas, and get back arr buf
 				// on promise.all then go to step5
 				var deferred_scaleBadge = new Deferred();
-				self.postMessageWithCallback(['tellFrameworkerDrawScaled', imgPathData[objOutputSizes[p].badge.useKey].img_src, objOutputSizes[p].badge.drawAtSize, fwId], function(aP, aDeferred_scaledBadge, aImgScaledResult) {
-					console.info('in callback of tellFrameworkerDrawScaled in worker, the arguments are:', uneval(arguments));
-					if (aImgScaledResult.status == 'ok') {
-						objOutputSizes[aP].badge.arrbuf = aImgScaledResult.arrbuf;
-						aDeferred_scaledBadge.resolve();
-					} else {
-						if (aImgScaledResult.reason) {
-							aDeferred_scaledBadge.reject(aImgScaledResult.reason + ' FOR ' + aP);
-						} else {
-							aDeferred_scaledBadge.reject('Unknown reason FOR ' + aP);
-						}
-					}
-				}.bind(null, p, deferred_scaleBadge));
+				self.postMessageWithCallback(['tellFrameworkerDrawScaled', objOutputSizes[p].badge.useKey, objOutputSizes[p].badge.drawAtSize, fwId], tellFrameWorkerDrawScaledCb.bind(null, objOutputSizes, p, deferred_scaleBadge));
 				promiseAllArr_drawScaledBadges.push(deferred_scaleBadge.promise);
 			}
 			
@@ -720,7 +710,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 						// :todo: ensure that aOptions.saveScaledBadgeDir exists, else make it
 						// :todo: iterate through each objOutputSizes and write the badge arrbuf to file code here, as obviously i only ge there if aOptions.saveScaledBadgeDir was true
 						for (var p in objOutputSizes) {
-							// console.error('objOutputSizes[p].badge.arrbuf:', objOutputSizes[p].badge.arrbuf);
+							// console.log('objOutputSizes[p].badge.arrbuf:', objOutputSizes[p].badge.arrbuf);
 							OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png'), new Uint8Array(objOutputSizes[p].badge.arrbuf), {tmpPath:OS.Path.join(OS.Constants.Path.desktopDir, 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png.tmp')});
 						}
 					}, 0);
@@ -729,23 +719,23 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				},
 				function(aReason) {
 					var rejObj = {name:'promiseAll_drawScaledBadges', aReason:aReason};
-					console.warn('Rejected - promiseAll_drawScaledBadges - ', rejObj);
+					console.error('Rejected - promiseAll_drawScaledBadges - ', rejObj);
 					self.postMessage(['destroyFrameworker', fwId]);
 					deferredMain_returnIconset.resolve([{
 						status: 'fail',
 						reason: aReason, // its a string message, lets show it to the user
-						aCaught: rejObj
+						rejObj: rejObj
 					}]);
 				}
 			).catch(
 				function(aCaught) {
 					var rejObj = {name:'promiseAll_drawScaledBadges', aCaught:aCaught};
-					console.error('Caught - promiseAll_drawScaledBadges - ', rejObj);
+					console.errpr('Caught - promiseAll_drawScaledBadges - ', rejObj);
 					self.postMessage(['destroyFrameworker', fwId]);
 					deferredMain_returnIconset.resolve([{
 						status: 'fail',
 						reason: 'promise caught',
-						aCaught: aCaught
+						rejObj: rejObj
 					}]);
 				}
 			);
@@ -761,7 +751,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		// tell frameworker to draw each base on a canvas.
 		// this is frameworker logic:
 			// if (!aOptions.aBadge)
-				// get arrbuf, set key as output
+				// get arrbuf, set key as output // use same method as i did for badge above
 			// else
 				// if aOptions.saveScaledBaseDir, then get arrbuf of each base canvas, and save to key as base
 				// overlap badge (of course if was getting arrbuf in previous line, then wait for that to finish)
@@ -770,12 +760,57 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			
 		// back to worker logic: after receive all arrbufs, then go to step6
 		
-		console.error('in step5');
-		self.postMessage(['destroyFrameworker', fwId]);
-		deferredMain_returnIconset.resolve([{
-			status: 'ok',
-			reason: 'temp resolve'
-		}]);
+		console.log('in step5');
+		var promiseAllArr_scaleOutput = [];
+		for (var p in objOutputSizes) {
+			// send message to frameworker to draw badge to canvas, and get back arr buf
+			// on promise.all then go to step5
+			var deferred_scaleOutput = new Deferred();
+			var getOptBuf = false;
+			var overlapObj = null;
+			if (aOptions.aBadge && objOutputSizes[p].badge.drawAtSize) { // cuz if its 0 then we dont want no overlap
+				getOptBuf = aOptions.saveScaledBaseDir; // if this is true, then set getOptBuf true here. we want this false if we arent passing an overlapObj
+				overlapObj = {
+					aImgPath: objOutputSizes[p].badge.useKey,
+					aDrawAtX: objOutputSizes[p].badge.x,
+					aDrawAtY: objOutputSizes[p].badge.y,
+					aDrawAtSize: objOutputSizes[p].badge.drawAtSize
+				}
+			}
+			self.postMessageWithCallback(['tellFrameworker_dSoBoOOSb', objOutputSizes[p].base.useKey, objOutputSizes[p].base.drawAtSize, getOptBuf, overlapObj, fwId], tellFrameworker_dSoBoOOSbCb.bind(null, objOutputSizes, p, deferred_scaleOutput));
+			promiseAllArr_scaleOutput.push(deferred_scaleOutput.promise);
+		}
+		
+		var promiseAll_scaleOutput = Promise.all(promiseAllArr_scaleOutput);
+		promiseAll_scaleOutput.then(
+			function(aVal) {
+				console.log('Fullfilled - promiseAll_scaleOutput - ', aVal);
+				// start - do stuff here - promiseAll_scaleOutput
+				step6();
+				// end - do stuff here - promiseAll_scaleOutput
+			},
+			function(aReason) {
+				var rejObj = {name:'promiseAll_scaleOutput', aReason:aReason};
+				console.warn('Rejected - promiseAll_scaleOutput - ', rejObj);
+				self.postMessage(['destroyFrameworker', fwId]);
+				deferredMain_returnIconset.resolve([{
+					status: 'fail',
+					reason: aReason, // its a string message, lets show it to the user
+					rejObj: rejObj
+				}]);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promiseAll_scaleOutput', aCaught:aCaught};
+				console.log('Caught - promiseAll_scaleOutput - ', rejObj);
+				self.postMessage(['destroyFrameworker', fwId]);
+				deferredMain_returnIconset.resolve([{
+					status: 'fail',
+					reason: 'promise caught',
+					rejObj: rejObj
+				}]);
+			}
+		);
 		
 	};
 	
@@ -786,6 +821,21 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		// if aOptions.saveScaledIconDir then duplicate arrbuf, and save them. duplicate it because the arrbuf is needed for processing per aCreateType later on
 		
 		// set to step7 which does the makeIconContainer per aCreateType
+		
+		console.error('step6');
+		
+		for (var p in objOutputSizes) {
+			OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'output_' + p + '.png'), new Uint8Array(objOutputSizes[p].arrbuf), {tmpPath:OS.Path.join(OS.Constants.Path.desktopDir, 'output_' + p + '.png.tmp')});
+			if (aOptions.saveScaledBaseDir) {
+				OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'base_' + p + '.png'), new Uint8Array(objOutputSizes[p].base.arrbuf), {tmpPath:OS.Path.join(OS.Constants.Path.desktopDir, 'base_' + p + '.png.tmp')});
+			}
+		}
+
+		self.postMessage(['destroyFrameworker', fwId]);
+		deferredMain_returnIconset.resolve([{
+			status: 'ok',
+			reason: 'temp resolve'
+		}]);
 	};
 	
 	var step7 = function() {
@@ -812,6 +862,38 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	step0();
 	
 	return deferredMain_returnIconset.promise; // return [{status:'ok', reason:'~~made iconset~~'}];
+}
+
+
+function tellFrameWorkerDrawScaledCb(objOutputSizes, aP, aDeferred_scaledBadge, aImgScaledResult) {
+	console.info('in callback of tellFrameworkerDrawScaled in worker, the arguments are:', uneval(arguments));
+	if (aImgScaledResult.status == 'ok') {
+		objOutputSizes[aP].badge.arrbuf = aImgScaledResult.arrbuf;
+		aDeferred_scaledBadge.resolve();
+	} else {
+		if (aImgScaledResult.reason) {
+			aDeferred_scaledBadge.reject(aImgScaledResult.reason + ' FOR ' + aP);
+		} else {
+			aDeferred_scaledBadge.reject('Unknown reason FOR ' + aP);
+		}
+	}
+}
+
+function tellFrameworker_dSoBoOOSbCb(objOutputSizes, aP, aDeferred_scaledBadge, aImgScaledResult) {
+	console.info('in callback of tellFrameworkerDrawScaled in worker, the arguments are:', uneval(arguments));
+	if (aImgScaledResult.status == 'ok') {
+		if (aImgScaledResult.optBuf) {
+			objOutputSizes[aP].base.arrbuf = aImgScaledResult.optBuf;
+		}
+		objOutputSizes[aP].arrbuf = aImgScaledResult.finalBuf;
+		aDeferred_scaledBadge.resolve();
+	} else {
+		if (aImgScaledResult.reason) {
+			aDeferred_scaledBadge.reject(aImgScaledResult.reason + ' FOR ' + aP);
+		} else {
+			aDeferred_scaledBadge.reject('Unknown reason FOR ' + aP);
+		}
+	}
 }
 
 function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalingAlgo) {
@@ -925,7 +1007,7 @@ function Deferred() {
 		}.bind(this));
 		Object.freeze(this);
 	} catch (ex) {
-		console.error('Promise not available!', ex);
+		console.log('Promise not available!', ex);
 		throw new Error('Promise not available!');
 	}
 }

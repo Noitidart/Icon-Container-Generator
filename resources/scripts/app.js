@@ -610,10 +610,12 @@ var bootstrapMsgListener = {
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
 						},
 						function(aReason) {
+							console.error('aReject:', aReason);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					).catch(
 						function(aCatch) {
+							console.error('aCatch:', aCatch);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					);

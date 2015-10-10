@@ -224,11 +224,29 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 				resolveWithArr.push([aImgDataObj.arrbuf]);
 				resolveWithArr.push(SIC_TRANS_WORD);
 			}
-			console.log('ok from callback will transfer arrbuf, it is currently:', aImgDataObj.arrbuf.byteLength)
-			deferredMain_tellFrameworkerDrawScaled.resolve(resolveWithArr);
-			console.log('ok from callback should have transferred arrbuf should now be 0 it is:', aImgDataObj.arrbuf.byteLength);
+			deferredMain_tellFrameworkerDrawScaled.resolve(resolveWithArr);		
 		});
 		return deferredMain_tellFrameworkerDrawScaled.promise;
+	},
+	tellFrameworker_dSoBoOOSb: function(aImgPath, aDrawAtSize, optBuf, optOverlapObj, aId) {
+		var deferredMain_tellFrameworker_dSoBoOOSb = new Deferred();
+		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['drawScaled_optBuf_optOverlapOptScaled_buf', aImgPath, aDrawAtSize, optBuf, optOverlapObj], fsMsgListener.funcScope, function(aImgDataObj) {
+			console.log('in bootstrap callback of tellFrameworkerLoadImg, resolving');
+			var resolveWithArr = [aImgDataObj];
+			var bufTrans = [];
+			if (aImgDataObj.optBuf) {
+				bufTrans.push(aImgDataObj.optBuf);
+			}
+			if (aImgDataObj.finalBuf) {
+				bufTrans.push(aImgDataObj.finalBuf);
+			}
+			if (aImgDataObj.optBuf || aImgDataObj.finalBuf) {
+				resolveWithArr.push(bufTrans);
+				resolveWithArr.push(SIC_TRANS_WORD);
+			}
+			deferredMain_tellFrameworker_dSoBoOOSb.resolve(resolveWithArr);	
+		});
+		return deferredMain_tellFrameworker_dSoBoOOSb.promise;
 	}
 	/*
 	loadImgGetImgData: function(aImgPath) {
@@ -338,10 +356,12 @@ var fsMsgListener = {
 							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
 						},
 						function(aReason) {
+							console.error('aReject:', aReason);
 							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					).catch(
 						function(aCatch) {
+							console.error('aCatch:', aCatch);
 							aMsgEvent.target.messageManager.sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
 						}
 					);
@@ -489,10 +509,12 @@ function SICWorker(workerScopeName, aPath, aFuncExecScope=bootstrap, aCore=core)
 								}
 							},
 							function(aReason) {
+								console.error('aReject:', aReason);
 								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aReason]]);
 							}
 						).catch(
 							function(aCatch) {
+								console.error('aCatch:', aCatch);
 								bootstrap[workerScopeName].postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
 							}
 						);

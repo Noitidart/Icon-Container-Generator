@@ -66,7 +66,7 @@ var bootstrapCallbacks = {
 		return deferredMain_loadImg.promise;
 	},
 	drawScaled: function(aImgPath, aDrawAtSize) {
-		// aImgPath is one of keys in imgPathData
+		// aImgPath is one of keys in imgPathData, so its devuser provided path
 		// must be square obiouvsly, i am assuming it is
 		// aDrawAtSize is what the width and height will be set to
 		// a canvas is created, and and saved in this object
@@ -117,8 +117,175 @@ var bootstrapCallbacks = {
 		}, 'image/png');
 		
 		return deferredMain_drawScaled.promise;
+	},
+	drawScaled_optBuf_optOverlapOptScaled_buf: function(aImgPath, aDrawAtSize, optBuf, optOverlapObj) {
+		// this method will polute the imgPathData[aImgPath].scaleds[aDrawAtSize].Can with the overlap // link165151
+		
+		// aImgPath
+		// drawAtSize - size to draw aProvidedImgPath at. this will also be the canvas size
+		// optBuf - after drawing scaled aProvidedImgPath then optionally get non-overlaped buf. set to true. only obyed if optOverlapProvidedImgPath is set, else throws
+		// optOverlapObj - {
+		//  	aImgPath
+		//  	aDrawAtX
+		//  	aDrawAtY
+		//  	aDrawAtSize
+		//  }
+		var deferredMain_dSoBoOOSb = new Deferred();
+		
+		if (optBuf && !optOverlapObj) {
+			deferredMain_dSoBoOOSb.resolve([{
+				status: 'fail',
+				reason: 'devusre asking for optBuf but they arent overlapping, so this is redudant, as optBuf will be same as final buf'
+			}]);
+			return deferredMain_dSoBoOOSb.promise;
+		}
+		
+		// globals for steps
+		var rezObj = {};
+		var Ctx;
+		
+		//////
+		var step1 = function() {
+			console.error('step1');
+			// check if imgPathData has (it will be canvas if it has it) size of aDrawAtSize else create it
+			if (!('scaleds' in imgPathData[aImgPath])) {
+				imgPathData[aImgPath].scaleds = {};
+			}
+			
+			if (!(aDrawAtSize in imgPathData[aImgPath].scaleds)) {
+				imgPathData[aImgPath].scaleds[aDrawAtSize] = {};
+				imgPathData[aImgPath].scaleds[aDrawAtSize].Can = content.document.createElement('canvas');
+				Ctx = imgPathData[aImgPath].scaleds[aDrawAtSize].Can.getContext('2d');
+				
+				imgPathData[aImgPath].scaleds[aDrawAtSize].Can.width = aDrawAtSize;
+				imgPathData[aImgPath].scaleds[aDrawAtSize].Can.height = aDrawAtSize;
+				
+				if (aDrawAtSize == imgPathData[aImgPath].w) {
+					Ctx.drawImage(imgPathData[aImgPath].Image, 0, 0)
+				} else {
+					Ctx.drawImage(imgPathData[aImgPath].Image, 0, 0, aDrawAtSize, aDrawAtSize);
+				}
+			} else {
+				Ctx = imgPathData[aImgPath].scaleds[aDrawAtSize].Can.getContext('2d');
+			}
+			step2();
+		};
+		
+		var step2 = function() {
+			console.error('step2');
+			// optBuf
+			if (optBuf) {
+				var deferred_optBuf = new Deferred();
+				(imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aImgPath].scaleds[aDrawAtSize].Can, blobCb.bind(null, aImgPath, deferred_optBuf), 'image/png');
+				deferred_optBuf.promise.then(
+					function(aVal) {
+						console.log('Fullfilled - deferred_optBuf - ', aVal);
+						// start - do stuff here - deferred_optBuf
+						rezObj.optBuf = aVal;
+						step3();
+						// end - do stuff here - deferred_optBuf
+					},
+					function(aReason) {
+						var rejObj = {name:'deferred_optBuf', aReason:aReason};
+						console.warn('Rejected - deferred_optBuf - ', rejObj);
+						// deferred_createProfile.reject(rejObj);
+						deferredMain_dSoBoOOSb.resolve([{
+							status: 'fail',
+							reason: aReason
+						}]);
+					}
+				).catch(
+					function(aCaught) {
+						var rejObj = {name:'deferred_optBuf', aCaught:aCaught};
+						console.error('Caught - deferred_optBuf - ', rejObj);
+						// deferred_createProfile.reject(rejObj);
+						deferredMain_dSoBoOOSb.resolve([{
+							status: 'fail',
+							aCaught: aCaught
+						}]);
+					}
+				);
+			} else {
+				step3();
+			}
+		};
+		
+		var step3 = function() {
+			console.error('step3');
+			// overlap
+			if (optOverlapObj) {
+				// check of optOverlapObj.aImgPath at optOverlapObj.aDrawAtSize exists, else draw it to the current canvas at that size
+				if (imgPathData[optOverlapObj.aImgPath].scaleds && optOverlapObj.aDrawAtSize in imgPathData[optOverlapObj.aImgPath].scaleds) {
+					Ctx.drawImage(imgPathData[optOverlapObj.aImgPath].scaleds[optOverlapObj.aDrawAtSize].Can, optOverlapObj.aDrawAtX, optOverlapObj.aDrawAtY); // pollution link165151
+				} else {
+					Ctx.drawImage(imgPathData[optOverlapObj.aImgPath].Image, optOverlapObj.aDrawAtX, optOverlapObj.aDrawAtY, optOverlapObj.aDrawAtSize, optOverlapObj.aDrawAtSize); // pollution link165151
+				}
+				step4();
+			} else {
+				step4();
+			}
+		};
+		
+		var step4 = function() {
+			console.error('step4');
+			// final buf
+			var deferred_finalBuf = new Deferred();
+			(imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aImgPath].scaleds[aDrawAtSize].Can, blobCb.bind(null, aImgPath, deferred_finalBuf), 'image/png');
+			deferred_finalBuf.promise.then(
+				function(aVal) {
+					console.log('Fullfilled - deferred_finalBuf - ', aVal);
+					// start - do stuff here - deferred_finalBuf
+					rezObj.finalBuf = aVal;
+					rezObj.status = 'ok';
+					deferredMain_dSoBoOOSb.resolve([rezObj]);
+					// end - do stuff here - deferred_finalBuf
+				},
+				function(aReason) {
+					var rejObj = {name:'deferred_finalBuf', aReason:aReason};
+					console.warn('Rejected - deferred_finalBuf - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+					deferredMain_dSoBoOOSb.resolve([{
+						status: 'fail',
+						reason: aReason
+					}]);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'deferred_finalBuf', aCaught:aCaught};
+					console.error('Caught - deferred_finalBuf - ', rejObj);
+					// deferred_createProfile.reject(rejObj);
+					deferredMain_dSoBoOOSb.resolve([{
+						status: 'fail',
+						aCaught: aCaught
+					}]);
+				}
+			);
+		};
+
+		step1();
+		//////
+		
+		return deferredMain_dSoBoOOSb.promise;
 	}
 };
+
+		
+function blobCb(aImgPath, aDeferred_blobCb, blob) {
+	// gets arrbuf
+	
+	var reader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
+	reader.onloadend = function() {
+		// reader.result contains the ArrayBuffer.
+		aDeferred_blobCb.resolve(reader.result);
+	};
+	reader.onabort = function() {
+		aDeferred_blobCb.reject('Abortion on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"');
+	};
+	reader.onerror = function() {
+		aDeferred_blobCb.reject('Error on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"');
+	};
+	reader.readAsArrayBuffer(blob);
+}
 // end - functionalities
 
 // start - common helper functions
@@ -208,10 +375,12 @@ var bootstrapMsgListener = {
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
 						},
 						function(aReason) {
+							console.error('aReject:', aReason);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					).catch(
 						function(aCatch) {
+							console.error('aCatch:', aCatch);
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aCatch]]);
 						}
 					);
