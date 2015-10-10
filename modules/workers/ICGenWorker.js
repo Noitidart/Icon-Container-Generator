@@ -3,11 +3,10 @@
 // Imports
 importScripts('resource://gre/modules/osfile.jsm');
 importScripts('resource://gre/modules/workers/require.js');
-// var child_process = require('sdk/system/child_process');
-// console.log('child_process:', child_process);
+// importScripts('resource://gre/modules/commonjs/sdk/system/child_process/subprocess.js');
+// console.error('subprocess:', subprocess);
 
 // Globals
-var dummy = 0;
 var core = { // have to set up the main keys that you want when aCore is merged from mainthread in init
 	addon: {
 		path: {
@@ -889,7 +888,6 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		
 		if (aOptions.saveScaledBaseDir) {
 			setTimeout(function() {
-				// :todo: ensure aOptions.saveScaledBaseDir exists, if not then create it
 				makeDirAutofrom(aOptions.saveScaledBaseDir, {checkExistsFirst:true});
 				for (var p in objOutputSizes) {
 					// objOutputSizes[p].base.arrbuf is guranteed to exist as aOptions.saveScaledBadgeDir was true
@@ -906,7 +904,6 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 
 		if (aOptions.saveScaledIconDir) {
 			setTimeout(function() {
-				// :todo: ensure aOptions.saveScaledIconDir exists, if not then create it
 				makeDirAutofrom(aOptions.saveScaledIconDir, {checkExistsFirst:true});
 				// duplicate output buffer
 				for (var p in objOutputSizes) {
@@ -940,7 +937,6 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			case createTypeLinux:
 				
 					self.postMessage(['destroyFrameworker', fwId]); // no more need for frameworker, destrooy it
-					// :todo: turn aCreatePathDir into an object with key being size (square of course) of final output icons, and paths to the respective system folder to output the png's/svg to
 					// :todo; offer aOption.sudoPassword if they do that then i should write to root/share/icons. but for now and default is to write to user_home/share/icons FOR NON-QT so meaning for gtk
 					// aCreatePathDir = {}; // already made into an object in validation section above
 					if (core.os.toolkit.indexOf('gtk') == 0) {
@@ -972,7 +968,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 							}
 							
 							deferredMain_returnIconset.resolve([{
-								status: 'fail',
+								status: 'ok',
 								reason: 'succesfully created installed icon to linux'
 							}]);
 						}
@@ -1170,7 +1166,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 						}
 
 						deferredMain_returnIconset.resolve([{
-							status: 'fail',
+							status: 'ok',
 							reason: 'succesfully created ico'
 						}]);
 						
@@ -1181,7 +1177,61 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				break;
 			case createTypeIcns:
 				
-					/////
+					// create .iconset dir
+					var dirpathIconset = OS.Path.join(aCreatePathDir, aCreateName + '.iconset');
+					makeDirAutofrom(dirpathIconset);
+					
+					// write pngs to .iconset dir
+					var sizeToSubPngName = {
+						16:  ['icon_16x16'],
+						32: ['icon_16x16@2x', 'icon_32x32'],
+						64: ['icon_32x32@2x'],
+						128: ['icon_128x128'],
+						256: ['icon_128x128@2x', 'icon_256x256'],
+						512: ['icon_256x256@2x', 'icon_512x512'],
+						1024: ['icon_512x512@2x']
+					};
+					for (var p in sizeToSubPngName) {
+						for (var i=0; i<sizeToSubPngName[p].length; i++) {
+							var writePath = OS.Path.join(dirpathIconset, sizeToSubPngName[p][i] + '.png');
+							try {
+								if (i == 0) {
+									OS.File.writeAtomic(writePath, new Uint8Array(objOutputSizes[p].arrbuf), {
+										tmpPath: writePath + '.png'
+									});
+								} else {
+									var zeroethPath = OS.Path.join(dirpathIconset, sizeToSubPngName[p][0] + '.png');
+									OS.File.copy(zeroethPath, writePath);
+								}
+							} catch (filex) {
+								deferredMain_returnIconset.resolve([{
+									status: 'fail',
+									reason: 'write atomic or copy error, see filex in browser console',
+									filex: filex
+								}]);
+								return;
+							}
+						}
+					}
+					
+					// run iconutil on .iconset dir
+					self.postMessageWithCallback(['runIconutil', ['-c', 'icns', dirpathIconset]], function(aCode) {
+						
+						// delete .iconset dir
+						OS.File.removeDir(dirpathIconset); // dont need , ignorePermissions:false as i have written to this directory, so its impossible for it to not have write permissions // also impossible to ignoreAbsent, as i created it there just a few lines above
+						
+						if (aCode != 0) {
+							deferredMain_returnIconset.resolve([{
+								status: 'fail',
+								reason: 'failed to run iconutil'
+							}]);
+						} else {
+							deferredMain_returnIconset.resolve([{
+								status: 'ok',
+								reason: 'succesfully created icns'
+							}]);
+						}
+					});
 				
 				break;
 			default:

@@ -6,6 +6,10 @@ const {TextDecoder, TextEncoder, OS} = Cu.import('resource://gre/modules/osfile.
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/XPCOMUtils.jsm');
+// Import SDK Stuff
+const COMMONJS_URI = 'resource://gre/modules/commonjs';
+const { require } = Cu.import(COMMONJS_URI + '/toolkit/require.js', {});
+var child_process = require('sdk/system/child_process');
 
 // Globals
 const core = {
@@ -262,6 +266,26 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			deferredMain_tellFrameworker_gIDOF.resolve(resolveWithArr);	
 		});
 		return deferredMain_tellFrameworker_gIDOF.promise;
+	},
+	runIconutil: function(aArgs) {
+		var mainDeferred_runIconutil = new Deferred();
+		
+		var iconutil = child_process.spawn('/usr/bin/iconutil', aArgs);
+
+		iconutil.stdout.on('data', function (data) {
+			console.error('iconutil stdout:', data);
+		});
+
+		iconutil.stderr.on('data', function (data) {
+			console.error('iconutilstderr:', data);
+		});
+
+		iconutil.on('close', function (code) {
+			console.error('iconutil exited with code', code);
+			mainDeferred_runIconutil.resolve([code]);
+		});
+		
+		return mainDeferred_runIconutil.promise;
 	}
 };
 
