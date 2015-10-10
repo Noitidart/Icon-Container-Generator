@@ -270,10 +270,12 @@ var fsFuncs = { // functions for framescripts to call in main thread
 	appFunc_generateFiles: function(argsForWorkerReturnIconset, aFrameScriptMessageEvent) {
 		console.log('in appFunc_generateFiles, arguments:', arguments);
 		argsForWorkerReturnIconset.splice(0, 0, 'returnIconset'); // add in func name for my style of postMessage
+		var mainDeferred_appFuncGen = new Deferred();
 		ICGenWorker.postMessageWithCallback(argsForWorkerReturnIconset, function(aStatusObj) {
 			console.log('returnIconset completed, aStatusObj:', aStatusObj);
-			aFrameScriptMessageEvent.target.messageManager.sendAsyncMessage(core.addon.id, ['generateFiles_response', aStatusObj]);
+			mainDeferred_appFuncGen.resolve([aStatusObj]);
 		});
+		return mainDeferred_appFuncGen.promise;
 	},
 	// fsReturnIconset.js functions
 	frameworkerReady: function(aMsgEvent) {

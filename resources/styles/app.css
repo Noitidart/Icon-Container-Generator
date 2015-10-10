@@ -19,7 +19,8 @@ select[multiple] {
 	display: inline-block;
 	border: 2px dashed steelblue;
 	border-radius: 3px;
-	background-color: #d7d7d7;
+	/*background-color: #d7d7d7;*/
+	background: transparent url("chrome://icon-container-generator/content/resources/images/canvas_bg.png") repeat scroll top left;
 }
 
 .outputPreviewCanCont {

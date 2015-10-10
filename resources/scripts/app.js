@@ -107,19 +107,7 @@ function handleDocElDragOver(e) {
 }
 
 var bootstrapCallbacks = {
-	generateFiles_response: function(aReturnObj) {
-		// bootstrap calls this after it runs the chromeworker returnIconset function
-		console.log('ok back in app.js after returnIconset complete, aReturnObj:', aReturnObj);
-		if (aReturnObj.status == 'fail') {
-			alert('Icon container process failed with message: "' + aReturnObj.reason + '"')
-		} else {
-			if (aReturnObj.reason) {
-				alert('Succesfully completed proccessing with pmessage: "' + aReturnObj.reason + '"');
-			} else {
-				alert('Succesfully completed proccessing');
-			}
-		}
-	}
+	
 };
 
 // end - personal funcitonalities
@@ -323,12 +311,25 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 
 			aOptions.dontMakeIconContainer = MODULE.aOptions_dontMakeIconContainer;
 			
-			contentMMFromContentWindow_Method2(window).sendAsyncMessage(core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions]]); // this will callback into generateFiles_response
+			var iconProcessTimeStart = new Date().getTime();
+			sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions]], bootstrapMsgListener.funcScope, function(aReturnObj) {
+				console.info('icon process time:', new Date().getTime() - iconProcessTimeStart, 'ms');
+				// bootstrap calls this after it runs the chromeworker returnIconset function
+				console.log('ok back in app.js after returnIconset complete, aReturnObj:', aReturnObj);
+				if (aReturnObj.status == 'fail') {
+					alert('Icon container process failed with message: "' + aReturnObj.reason + '"')
+				} else {
+					if (aReturnObj.reason) {
+						alert('Succesfully completed proccessing with pmessage: "' + aReturnObj.reason + '"');
+					} else {
+						alert('Succesfully completed proccessing');
+					}
+				}
+			})
 		}
 	}]);
 
 // end - angular
-	
 function generatePreviews() {
 	// generate aBaseSourcesNameSizeObj
 	var aBaseSourcesNameSizeObj = {};

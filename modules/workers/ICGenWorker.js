@@ -241,6 +241,29 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		}
 	}
 	
+	// aOutputSizesArr check, need at least one
+	if (!aOutputSizesArr || !Array.isArray(aOutputSizesArr) || aOutputSizesArr.length == 0) {
+		// throw new Error('must provide at least one OUTPUT SIZE');
+		return [{
+			status: 'fail',
+			reason: 'must provide at least one OUTPUT SIZE'
+		}];
+	}
+	
+	// ensure no duplicates in aOutputSizesArr
+	if (arrHasDupes(aOutputSizesArr)) {
+		// throw new Error('dupes in aOutputSizesArr');
+		return [{
+			status: 'fail',
+			reason: 'must not have duplicate values in output sizes array list'
+		}];		
+	}
+	
+	// ensure the output sizes are parseInt'ed
+	for (var i=0; i<aOutputSizesArr.length; i++) {
+		aOutputSizesArr[i] = parseInt(aOutputSizesArr[i]);
+	}
+	
 	// start - validation of args
 	// check aCreateType is supported
 	const createTypeIcns = 'ICNS';
@@ -250,13 +273,39 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	// ensure aCreateType is one that i support, and ensure the platform supports processing of this type
 	switch (aCreateType) {
 		case createTypeIcns:
-			
+				
+				// ensure right platform
 				if (core.os.name != 'darwin') {
 					return [{
 						status: 'fail',
 						reason: 'icns can only be created on mac operating system, and you are not on a mac',
 						reasonShort: 'wrong platform'
 					}];
+				}
+				
+				// make sure the output sizes are exact
+				var requiredOutputSizes = [16, 32, 64, 128, 256, 512, 1024];
+				
+				// make sure each element in aOutputSizesArr is found within required
+				for (var i=0; i<requiredOutputSizes.length; i++) {
+					if (aOutputSizesArr.indexOf(requiredOutputSizes[i]) == -1) {
+						return [{
+							status: 'fail',
+							reason: 'error, missing output size of ' + requiredOutputSizes[i] + '! to create an icns on mac MUST have following output sizes, no more and no less: 16, 32, 64, 128, 256, 512, 1024',
+							reasonShort: 'wrong platform'
+						}];
+					}
+				}
+				
+				// make sure no other elements are in aOutputSizesArr, other then those that are in requiredOutputSizes
+				for (var i=0; i<aOutputSizesArr.length; i++) {
+					if (requiredOutputSizes.indexOf(aOutputSizesArr[i]) == -1) {
+						return [{
+							status: 'fail',
+							reason: 'error, invalid size of ' + aOutputSizesArr[i] + ' was provided! to create an icns on mac must have ONLY the following output sizes, no more and no less: 16, 32, 64, 128, 256, 512, 1024',
+							reasonShort: 'wrong platform'
+						}];
+					}
 				}
 				
 			break;
@@ -303,17 +352,6 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	}
 	// aBaseSrcImgPathArr check, ensure to duplicates maybe? if i do, then i should also do with aOptions.aBadgeSrcImgPathArr
 	
-	// aOutputSizesArr check, need at least one
-	if (!aOutputSizesArr || !Array.isArray(aOutputSizesArr) || aOutputSizesArr.length == 0) {
-		// throw new Error('must provide at least one OUTPUT SIZE');
-		return [{
-			status: 'fail',
-			reason: 'must provide at least one OUTPUT SIZE'
-		}];
-	}
-	
-	// :todo: ensure no dupliates in aOutputSizesArr
-	
 	// validate aCreatePathDir
 	if (aCreateType == createTypeLinux) {
 		if (aCreatePathDir) {
@@ -353,11 +391,6 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				reason: 'devuser specified not to create icon container, SO then MUST specify o save the scaled as pngs to a directory, otherwise its pointless calling this function'
 			}];
 		}
-	}
-	
-	// ensure the output sizes are parseInt'ed
-	for (var i=0; i<aOutputSizesArr.length; i++) {
-		aOutputSizesArr[i] = parseInt(aOutputSizesArr[i]);
 	}
 	
 	// with respect to badge now
@@ -583,7 +616,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				return;
 			}
 		}
-	
+		
 		// ok all tests passed
 		// push to imgPathData_base and imgPathData_badge
 		for (var i=0; i<aBaseSrcImgPathArr.length; i++) {
@@ -593,6 +626,36 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		if (aOptions.aBadgeSrcImgPathArr) {
 			for (var i=0; i<aOptions.aBadgeSrcImgPathArr.length; i++) {
 				imgPathData_badge[aOptions.aBadgeSrcImgPathArr[i]] = imgPathData[aOptions.aBadgeSrcImgPathArr[i]];
+			}
+		}
+		
+		// check if any duplicate sizes in imgPathData_base
+		for (var p in imgPathData_base) {
+			for (var p2 in imgPathData_base) {
+				if (p2 == p) { continue } // its same entry so skip it
+				if (imgPathData_base[p2].w == imgPathData_base[p].w) {
+					self.postMessage(['destroyFrameworker', fwId]);
+					deferredMain_returnIconset.resolve([{
+						status: 'fail',
+						reason: 'In base source image set provided, multiple images cannot share same size. Image at provided path of "' + p + '" has the same size (width and height) of the provided path of "' + p2 + '", make sure each image at supplied paths are not same size.'
+					}]);
+					return;
+				}
+			}
+		}
+		
+		// check if any duplicate sizes in imgPathData_badge
+		for (var p in imgPathData_badge) {
+			for (var p2 in imgPathData_badge) {
+				if (p2 == p) { continue } // its same entry so skip it
+				if (imgPathData_badge[p2].w == imgPathData_badge[p].w) {
+					self.postMessage(['destroyFrameworker', fwId]);
+					deferredMain_returnIconset.resolve([{
+						status: 'fail',
+						reason: 'In badge source image set provided, multiple images cannot share same size. Image at provided path of "' + p + '" has the same size (width and height) of the provided path of "' + p2 + '", make sure each image at supplied paths are not same size.'
+					}]);
+					return;
+				}
 			}
 		}
 		
@@ -882,6 +945,38 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					// aCreatePathDir = {}; // already made into an object in validation section above
 					if (core.os.toolkit.indexOf('gtk') == 0) {
 						// populate aCreatePathDir, which is now an object, with key of icon size, and value of path to write it in
+						for (var p in objOutputSizes) {
+							var outputSize = objOutputSizes[p].base.size;
+							var sizeDirBasename = outputSize + 'x' + outputSize;
+							var writePath = OS.Path.join([
+								OS.Constants.Path.homeDir,
+								'.local',
+								'share',
+								'icons',
+								'hicolor',
+								sizeDirBasename,
+								'apps',
+								aCreateName + '.png'
+							]);
+							try {
+								OS.File.writeAtomic(writePath, new Uint8Array(objOutputSizes[p].arrbuf), {
+									tmpPath: writePath + '.png'
+								});
+							} catch (filex) {
+								deferredMain_returnIconset.resolve([{
+									status: 'fail',
+									reason: 'write atomic error, see filex in browser console',
+									filex: filex
+								}]);
+								return;
+							}
+							
+							deferredMain_returnIconset.resolve([{
+								status: 'fail',
+								reason: 'succesfully created installed icon to linux'
+							}]);
+						}
+						
 					} else {
 						// its QT
 						// not yet supported, validation section above will throw
@@ -1299,4 +1394,18 @@ function isLittleEndian() {
 	new DataView(buffer).setInt16(0, 256, true);
 	return new Int16Array(buffer)[0] === 256;
 };
+
+
+function arrHasDupes(A) { // finds any duplicate array elements using the fewest possible comparison
+	var i, j, n;
+	n=A.length;
+	// to ensure the fewest possible comparisons
+	// outer loop uses each item i at 0 through n
+	// inner loop only compares items j at i+1 to n
+	for (i=0; i<n; i++) {
+		for (j=i+1; j<n; j++) {
+			if (A[i]==A[j]) return true;
+	}	}
+	return false;
+}
 // End - Common Functions
