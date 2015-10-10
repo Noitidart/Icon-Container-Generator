@@ -164,7 +164,8 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			// aBrowser.setAttribute('disablesecurity', true);
 			// aBrowser.setAttribute('disablehistory', 'true');
 			aBrowser.setAttribute('type', 'content');
-			aBrowser.setAttribute('style', 'height:100px;border:10px solid steelblue;');
+			// aBrowser.setAttribute('style', 'height:100px;border:10px solid steelblue;');
+			aBrowser.setAttribute('style', 'display:none;');
 			// aBrowser.setAttribute('src', 'data:text/html,back to content');
 			aBrowser.setAttribute('src', core.addon.path.content_remote + 'frameworker.htm');
 			
@@ -175,7 +176,7 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 			
 			aDocument.documentElement.appendChild(aBrowser);
 			console.log('aBrowser.messageManager:', aBrowser.messageManager);
-			aBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fsReturnIconset.js', false);			
+			aBrowser.messageManager.loadFrameScript(core.addon.path.scripts + 'fsReturnIconset.js?' + core.addon.cache_key, false);			
 			
 			// ICGenWorkerFuncs.fwInstances[aId].browser.messageManager.IconContainerGenerator_id = aId; // doesnt work
 			// console.log('ICGenWorkerFuncs.fwInstances[aId].browser.messageManager:', ICGenWorkerFuncs.fwInstances[aId].browser.messageManager);
@@ -207,9 +208,9 @@ var ICGenWorkerFuncs = { // functions for worker to call in main thread
 		
 
 	},
-	tellFrameworkerLoadImg: function(aImgPath, aId) {
+	tellFrameworkerLoadImg: function(aProvidedPath, aLoadPath, aId) {
 		var deferredMain_tellFrameworkerLoadImg = new Deferred();
-		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aImgPath], fsMsgListener.funcScope, function(aImgDataObj) {
+		sendAsyncMessageWithCallback(ICGenWorkerFuncs.fwInstances[aId].browser.messageManager, core.addon.id, ['loadImg', aProvidedPath, aLoadPath], fsMsgListener.funcScope, function(aImgDataObj) {
 			console.log('in bootstrap callback of tellFrameworkerLoadImg, resolving');
 			deferredMain_tellFrameworkerLoadImg.resolve([aImgDataObj]);
 		});
@@ -293,7 +294,7 @@ var fsFuncs = { // functions for framescripts to call in main thread
 };
 
 function startMainWorker() {
-	var promise_getICGenWorker = SICWorker('ICGenWorker', core.addon.path.workers + 'ICGenWorker.js', ICGenWorkerFuncs);
+	var promise_getICGenWorker = SICWorker('ICGenWorker', core.addon.path.workers + 'ICGenWorker.js?' + core.addon.cache_key, ICGenWorkerFuncs);
 	promise_getICGenWorker.then(
 		function(aVal) {
 			console.log('Fullfilled - promise_getICGenWorker - ', aVal);

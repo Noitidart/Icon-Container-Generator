@@ -520,7 +520,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			imgPathData[aBaseSrcImgPathArr[i]].img_src = aBaseSrcImgPathArr[i].indexOf('://') > -1 ? aBaseSrcImgPathArr[i] : OS.Path.toFileURI(aBaseSrcImgPathArr[i]); // if path is a os path, convert it to file uri // :todo: add verification if not file uri and if not then convert. must be chrome:// resource:// http(s):// or file:// // so here i am guessing if it has no `://` then it is os path, so i convert it
 			var deferred_loadImage = new Deferred();
 			promiseAllArr_loadImgAndGetImgDatas.push(deferred_loadImage.promise);
-			self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aBaseSrcImgPathArr].img_src, fwId], tellFrameworkerLoadImgCallback.bind(null, aBaseSrcImgPathArr[i], deferred_loadImage));
+			self.postMessageWithCallback(['tellFrameworkerLoadImg', aBaseSrcImgPathArr[i], imgPathData[aBaseSrcImgPathArr[i]].img_src, fwId], tellFrameworkerLoadImgCallback.bind(null, aBaseSrcImgPathArr[i], deferred_loadImage));
 		}
 		
 		if (aOptions.aBadge) {
@@ -531,7 +531,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				imgPathData[aOptions.aBadgeSrcImgPathArr[i]].img_src = aOptions.aBadgeSrcImgPathArr[i].indexOf('://') > -1 ? aOptions.aBadgeSrcImgPathArr[i] : OS.Path.toFileURI(aOptions.aBadgeSrcImgPathArr[i]); // if path is a os path, convert it to file uri // :todo: add verification if not file uri and if not then convert. must be chrome:// resource:// http(s):// or file:// // so here i am guessing if it has no `://` then it is os path, so i convert it
 				var deferred_loadImage = new Deferred();
 				promiseAllArr_loadImgAndGetImgDatas.push(deferred_loadImage.promise);
-				self.postMessageWithCallback(['tellFrameworkerLoadImg', imgPathData[aOptions.aBadgeSrcImgPathArr[i]].img_src, fwId], tellFrameworkerLoadImgCallback.bind(null, aOptions.aBadgeSrcImgPathArr[i], deferred_loadImage));
+				self.postMessageWithCallback(['tellFrameworkerLoadImg', aOptions.aBadgeSrcImgPathArr[i], imgPathData[aOptions.aBadgeSrcImgPathArr[i]].img_src, fwId], tellFrameworkerLoadImgCallback.bind(null, aOptions.aBadgeSrcImgPathArr[i], deferred_loadImage));
 			}
 		}
 		
@@ -771,7 +771,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			if (aOptions.aBadge && objOutputSizes[p].badge.drawAtSize) { // cuz if its 0 then we dont want no overlap
 				getOptBuf = aOptions.saveScaledBaseDir; // if this is true, then set getOptBuf true here. we want this false if we arent passing an overlapObj
 				overlapObj = {
-					aImgPath: objOutputSizes[p].badge.useKey,
+					aProvidedPath: objOutputSizes[p].badge.useKey,
 					aDrawAtX: objOutputSizes[p].badge.x,
 					aDrawAtY: objOutputSizes[p].badge.y,
 					aDrawAtSize: objOutputSizes[p].badge.drawAtSize

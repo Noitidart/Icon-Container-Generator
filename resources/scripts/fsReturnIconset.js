@@ -24,75 +24,75 @@ const NS_HTML = 'http://www.w3.org/1999/xhtml';
 var imgPathData = {}; //keys are image path, and value is object holding data
 
 var bootstrapCallbacks = {
-	loadImg: function(aImgPath) {
-		// aImgPath must be file uri, or chrome path, or http NOT os path
+	loadImg: function(aProvidedPath, aLoadPath) {
+		// aProvidedPath must be file uri, or chrome path, or http NOT os path
 		console.log('in loadImg');
 		
 		var deferredMain_loadImg = new Deferred();
 		
-		imgPathData[aImgPath] = {};
+		imgPathData[aProvidedPath] = {};
 		
-		imgPathData[aImgPath].Image = new content.Image();
+		imgPathData[aProvidedPath].Image = new content.Image();
 		
-		imgPathData[aImgPath].Image.onload = function() {
-			// imgPathData[aImgPath].Canvas = content.document.createElementNS(NS_HTML, 'canvas')
-			// imgPathData[aImgPath].Ctx = imgPathData[aImgPath].Canvas.getContext('2d');
-			imgPathData[aImgPath].w = this.naturalWidth;
-			imgPathData[aImgPath].h = this.naturalHeight;
-			imgPathData[aImgPath].status = 'img-ok';
+		imgPathData[aProvidedPath].Image.onload = function() {
+			// imgPathData[aProvidedPath].Canvas = content.document.createElementNS(NS_HTML, 'canvas')
+			// imgPathData[aProvidedPath].Ctx = imgPathData[aProvidedPath].Canvas.getContext('2d');
+			imgPathData[aProvidedPath].w = this.naturalWidth;
+			imgPathData[aProvidedPath].h = this.naturalHeight;
+			imgPathData[aProvidedPath].status = 'img-ok';
 			deferredMain_loadImg.resolve([{
 				status: 'img-ok',
-				w: imgPathData[aImgPath].w,
-				h: imgPathData[aImgPath].h
+				w: imgPathData[aProvidedPath].w,
+				h: imgPathData[aProvidedPath].h
 			}]);
 		};
 		
-		imgPathData[aImgPath].Image.onabort = function() {
-			imgPathData[aImgPath].status = 'img-abort';
+		imgPathData[aProvidedPath].Image.onabort = function() {
+			imgPathData[aProvidedPath].status = 'img-abort';
 			deferredMain_loadImg.resolve([{
 				status: 'img-abort'
 			}]);
 		};
 		
-		imgPathData[aImgPath].Image.onerror = function() {
-			imgPathData[aImgPath].status = 'img-error';
+		imgPathData[aProvidedPath].Image.onerror = function() {
+			imgPathData[aProvidedPath].status = 'img-error';
 			deferredMain_loadImg.resolve([{
 				status: 'img-error'
 			}]);
 		};
 		
-		imgPathData[aImgPath].Image.src = aImgPath;
+		imgPathData[aProvidedPath].Image.src = aLoadPath;
 		
 		return deferredMain_loadImg.promise;
 	},
-	drawScaled: function(aImgPath, aDrawAtSize) {
-		// aImgPath is one of keys in imgPathData, so its devuser provided path
+	drawScaled: function(aProvidedPath, aDrawAtSize) {
+		// aProvidedPath is one of keys in imgPathData, so its devuser provided path
 		// must be square obiouvsly, i am assuming it is
 		// aDrawAtSize is what the width and height will be set to
 		// a canvas is created, and and saved in this object
-		console.error('in drawScaled, arguments:', aImgPath, aDrawAtSize);
+		console.error('in drawScaled, arguments:', aProvidedPath, aDrawAtSize);
 		var deferredMain_drawScaled = new Deferred();
 		
-		if (!('scaleds' in imgPathData[aImgPath])) {
-			imgPathData[aImgPath].scaleds = {};
+		if (!('scaleds' in imgPathData[aProvidedPath])) {
+			imgPathData[aProvidedPath].scaleds = {};
 		}
 		
-		if (!(aDrawAtSize in imgPathData[aImgPath].scaleds)) {
-			imgPathData[aImgPath].scaleds[aDrawAtSize] = {};
-			imgPathData[aImgPath].scaleds[aDrawAtSize].Can = content.document.createElement('canvas');
-			var Ctx = imgPathData[aImgPath].scaleds[aDrawAtSize].Can.getContext('2d');
+		if (!(aDrawAtSize in imgPathData[aProvidedPath].scaleds)) {
+			imgPathData[aProvidedPath].scaleds[aDrawAtSize] = {};
+			imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can = content.document.createElement('canvas');
+			var Ctx = imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.getContext('2d');
 			
-			imgPathData[aImgPath].scaleds[aDrawAtSize].Can.width = aDrawAtSize;
-			imgPathData[aImgPath].scaleds[aDrawAtSize].Can.height = aDrawAtSize;
+			imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.width = aDrawAtSize;
+			imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.height = aDrawAtSize;
 			
-			if (aDrawAtSize == imgPathData[aImgPath].w) {
-				Ctx.drawImage(mgPathData[aImgPath].Image, 0, 0)
+			if (aDrawAtSize == imgPathData[aProvidedPath].w) {
+				Ctx.drawImage(imgPathData[aProvidedPath].Image, 0, 0)
 			} else {
-				Ctx.drawImage(imgPathData[aImgPath].Image, 0, 0, aDrawAtSize, aDrawAtSize);
+				Ctx.drawImage(imgPathData[aProvidedPath].Image, 0, 0, aDrawAtSize, aDrawAtSize);
 			}
 		}
 		
-		(imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aImgPath].scaleds[aDrawAtSize].Can, function(blob) {
+		(imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can, function(blob) {
 			var reader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
 			reader.onloadend = function() {
 				// reader.result contains the ArrayBuffer.
@@ -104,13 +104,13 @@ var bootstrapCallbacks = {
 			reader.onabort = function() {
 				deferredMain_drawScaled.resolve([{
 					status: 'fail',
-					reason: 'Abortion on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"'
+					reason: 'Abortion on nsIDOMFileReader, failed reading blob of provided path: "' + aProvidedPath + '"'
 				}]);
 			};
 			reader.onerror = function() {
 				deferredMain_drawScaled.resolve([{
 					status: 'fail',
-					reason: 'Error on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"'
+					reason: 'Error on nsIDOMFileReader, failed reading blob of provided path: "' + aProvidedPath + '"'
 				}]);
 			};
 			reader.readAsArrayBuffer(blob);
@@ -118,14 +118,14 @@ var bootstrapCallbacks = {
 		
 		return deferredMain_drawScaled.promise;
 	},
-	drawScaled_optBuf_optOverlapOptScaled_buf: function(aImgPath, aDrawAtSize, optBuf, optOverlapObj) {
-		// this method will polute the imgPathData[aImgPath].scaleds[aDrawAtSize].Can with the overlap // link165151
+	drawScaled_optBuf_optOverlapOptScaled_buf: function(aProvidedPath, aDrawAtSize, optBuf, optOverlapObj) {
+		// this method will polute the imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can with the overlap // link165151
 		
-		// aImgPath
+		// aProvidedPath
 		// drawAtSize - size to draw aProvidedImgPath at. this will also be the canvas size
 		// optBuf - after drawing scaled aProvidedImgPath then optionally get non-overlaped buf. set to true. only obyed if optOverlapProvidedImgPath is set, else throws
 		// optOverlapObj - {
-		//  	aImgPath
+		//  	aProvidedPath
 		//  	aDrawAtX
 		//  	aDrawAtY
 		//  	aDrawAtSize
@@ -148,25 +148,25 @@ var bootstrapCallbacks = {
 		var step1 = function() {
 			console.error('step1');
 			// check if imgPathData has (it will be canvas if it has it) size of aDrawAtSize else create it
-			if (!('scaleds' in imgPathData[aImgPath])) {
-				imgPathData[aImgPath].scaleds = {};
+			if (!('scaleds' in imgPathData[aProvidedPath])) {
+				imgPathData[aProvidedPath].scaleds = {};
 			}
 			
-			if (!(aDrawAtSize in imgPathData[aImgPath].scaleds)) {
-				imgPathData[aImgPath].scaleds[aDrawAtSize] = {};
-				imgPathData[aImgPath].scaleds[aDrawAtSize].Can = content.document.createElement('canvas');
-				Ctx = imgPathData[aImgPath].scaleds[aDrawAtSize].Can.getContext('2d');
+			if (!(aDrawAtSize in imgPathData[aProvidedPath].scaleds)) {
+				imgPathData[aProvidedPath].scaleds[aDrawAtSize] = {};
+				imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can = content.document.createElement('canvas');
+				Ctx = imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.getContext('2d');
 				
-				imgPathData[aImgPath].scaleds[aDrawAtSize].Can.width = aDrawAtSize;
-				imgPathData[aImgPath].scaleds[aDrawAtSize].Can.height = aDrawAtSize;
+				imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.width = aDrawAtSize;
+				imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.height = aDrawAtSize;
 				
-				if (aDrawAtSize == imgPathData[aImgPath].w) {
-					Ctx.drawImage(imgPathData[aImgPath].Image, 0, 0)
+				if (aDrawAtSize == imgPathData[aProvidedPath].w) {
+					Ctx.drawImage(imgPathData[aProvidedPath].Image, 0, 0)
 				} else {
-					Ctx.drawImage(imgPathData[aImgPath].Image, 0, 0, aDrawAtSize, aDrawAtSize);
+					Ctx.drawImage(imgPathData[aProvidedPath].Image, 0, 0, aDrawAtSize, aDrawAtSize);
 				}
 			} else {
-				Ctx = imgPathData[aImgPath].scaleds[aDrawAtSize].Can.getContext('2d');
+				Ctx = imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.getContext('2d');
 			}
 			step2();
 		};
@@ -176,7 +176,7 @@ var bootstrapCallbacks = {
 			// optBuf
 			if (optBuf) {
 				var deferred_optBuf = new Deferred();
-				(imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aImgPath].scaleds[aDrawAtSize].Can, blobCb.bind(null, aImgPath, deferred_optBuf), 'image/png');
+				(imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can, blobCb.bind(null, aProvidedPath, deferred_optBuf), 'image/png');
 				deferred_optBuf.promise.then(
 					function(aVal) {
 						console.log('Fullfilled - deferred_optBuf - ', aVal);
@@ -214,11 +214,11 @@ var bootstrapCallbacks = {
 			console.error('step3');
 			// overlap
 			if (optOverlapObj) {
-				// check of optOverlapObj.aImgPath at optOverlapObj.aDrawAtSize exists, else draw it to the current canvas at that size
-				if (imgPathData[optOverlapObj.aImgPath].scaleds && optOverlapObj.aDrawAtSize in imgPathData[optOverlapObj.aImgPath].scaleds) {
-					Ctx.drawImage(imgPathData[optOverlapObj.aImgPath].scaleds[optOverlapObj.aDrawAtSize].Can, optOverlapObj.aDrawAtX, optOverlapObj.aDrawAtY); // pollution link165151
+				// check of optOverlapObj.aProvidedPath at optOverlapObj.aDrawAtSize exists, else draw it to the current canvas at that size
+				if (imgPathData[optOverlapObj.aProvidedPath].scaleds && optOverlapObj.aDrawAtSize in imgPathData[optOverlapObj.aProvidedPath].scaleds) {
+					Ctx.drawImage(imgPathData[optOverlapObj.aProvidedPath].scaleds[optOverlapObj.aDrawAtSize].Can, optOverlapObj.aDrawAtX, optOverlapObj.aDrawAtY); // pollution link165151
 				} else {
-					Ctx.drawImage(imgPathData[optOverlapObj.aImgPath].Image, optOverlapObj.aDrawAtX, optOverlapObj.aDrawAtY, optOverlapObj.aDrawAtSize, optOverlapObj.aDrawAtSize); // pollution link165151
+					Ctx.drawImage(imgPathData[optOverlapObj.aProvidedPath].Image, optOverlapObj.aDrawAtX, optOverlapObj.aDrawAtY, optOverlapObj.aDrawAtSize, optOverlapObj.aDrawAtSize); // pollution link165151
 				}
 				step4();
 			} else {
@@ -230,7 +230,7 @@ var bootstrapCallbacks = {
 			console.error('step4');
 			// final buf
 			var deferred_finalBuf = new Deferred();
-			(imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aImgPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aImgPath].scaleds[aDrawAtSize].Can, blobCb.bind(null, aImgPath, deferred_finalBuf), 'image/png');
+			(imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.toBlobHD || imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can.toBlob).call(imgPathData[aProvidedPath].scaleds[aDrawAtSize].Can, blobCb.bind(null, aProvidedPath, deferred_finalBuf), 'image/png');
 			deferred_finalBuf.promise.then(
 				function(aVal) {
 					console.log('Fullfilled - deferred_finalBuf - ', aVal);
@@ -270,7 +270,7 @@ var bootstrapCallbacks = {
 };
 
 		
-function blobCb(aImgPath, aDeferred_blobCb, blob) {
+function blobCb(aProvidedPath, aDeferred_blobCb, blob) {
 	// gets arrbuf
 	
 	var reader = Cc['@mozilla.org/files/filereader;1'].createInstance(Ci.nsIDOMFileReader); //new FileReader();
@@ -279,10 +279,10 @@ function blobCb(aImgPath, aDeferred_blobCb, blob) {
 		aDeferred_blobCb.resolve(reader.result);
 	};
 	reader.onabort = function() {
-		aDeferred_blobCb.reject('Abortion on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"');
+		aDeferred_blobCb.reject('Abortion on nsIDOMFileReader, failed reading blob of provided path: "' + aProvidedPath + '"');
 	};
 	reader.onerror = function() {
-		aDeferred_blobCb.reject('Error on nsIDOMFileReader, failed reading blob of provided path: "' + aImgPath + '"');
+		aDeferred_blobCb.reject('Error on nsIDOMFileReader, failed reading blob of provided path: "' + aProvidedPath + '"');
 	};
 	reader.readAsArrayBuffer(blob);
 }
