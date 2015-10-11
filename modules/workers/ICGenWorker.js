@@ -4,7 +4,7 @@
 importScripts('resource://gre/modules/osfile.jsm');
 importScripts('resource://gre/modules/workers/require.js');
 // importScripts('resource://gre/modules/commonjs/sdk/system/child_process/subprocess.js');
-// console.error('subprocess:', subprocess);
+
 
 // Globals
 var core = { // have to set up the main keys that you want when aCore is merged from mainthread in init
@@ -37,7 +37,7 @@ self.onmessage = function(aMsgEvent) {
 	// note:all msgs from bootstrap must be postMessage([nameOfFuncInWorker, arg1, ...])
 	var aMsgEventData = aMsgEvent.data;
 	
-	console.log('worker receiving msg:', aMsgEventData);
+
 	
 	var callbackPendingId;
 	if (typeof aMsgEventData[aMsgEventData.length-1] == 'string' && aMsgEventData[aMsgEventData.length-1].indexOf(SIC_CB_PREFIX) == 0) {
@@ -63,12 +63,12 @@ self.onmessage = function(aMsgEvent) {
 						}
 					},
 					function(aReason) {
-						console.error('aReject:', aReason);
+
 						self.postMessage([callbackPendingId, ['promise_rejected', aReason]]);
 					}
 				).catch(
 					function(aCatch) {
-						console.error('aCatch:', aCatch);
+
 						self.postMessage([callbackPendingId, ['promise_rejected', aCatch]]);
 					}
 				);
@@ -85,7 +85,7 @@ self.onmessage = function(aMsgEvent) {
 			}
 		}
 	}
-	else { console.warn('funcName', funcName, 'not in scope of WORKER') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 
 };
 
@@ -97,7 +97,7 @@ self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransf
 	var thisCallbackId = SIC_CB_PREFIX + sic_last_cb_id;
 	aFuncExecScope[thisCallbackId] = function() {
 		delete aFuncExecScope[thisCallbackId];
-		console.log('in worker callback trigger wrap, will apply aCB with these arguments:', uneval(arguments));
+
 		aCB.apply(null, arguments[0]);
 	};
 	aPostMessageArr.push(thisCallbackId);
@@ -106,7 +106,7 @@ self.postMessageWithCallback = function(aPostMessageArr, aCB, aPostMessageTransf
 
 ////// end of imports and definitions
 function init(objCore) {
-	//console.log('in worker init');
+
 	
 	// merge objCore into core
 	// core and objCore is object with main keys, the sub props
@@ -139,7 +139,7 @@ function init(objCore) {
 			// do nothing special
 	}
 	
-	console.log('init worker done');
+
 	
 	self.postMessage(['init']);
 }
@@ -148,7 +148,7 @@ function init(objCore) {
 
 var lastFrameworkerId = -1;
 function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions={}) {
-	console.log('in worker returnIconset, arguments:', JSON.stringify(arguments));
+
 	
 	// aCreateType - string. future plan to support things like tiff. in future maybe make this an arr, so can make multiple types in one shot.
 		// ico - can be done on any os
@@ -505,7 +505,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	// end - globals for steps
 	
 	var step0 = function() {
-		console.log('worker: step0');
+
 		// setup frameworker
 		lastFrameworkerId++;
 		fwId = lastFrameworkerId;
@@ -513,8 +513,8 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 	};
 	
 	var step1 = function(msgFrom_fsReturnIconset_onPageReady) {
-		console.log('worker: step1');
-		console.log('msgFrom_fsReturnIconset_onPageReady:', msgFrom_fsReturnIconset_onPageReady);
+
+
 		// self.postMessage(['destroyFrameworker', fwId]);
 		// deferredMain_returnIconset.resolve([{
 			// status: 'ok',
@@ -529,7 +529,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		var promiseAllArr_loadImgAndGetImgDatas = [];
 		
 		var tellFrameworkerLoadImgCallback = function(aProvidedPath, aDeferred_loadImage, aImgInfoObj) {
-			console.info('in callback of tellFrameworkerLoadImgCallback in worker, the arguments are:', uneval(arguments));
+
 			if (aImgInfoObj.status == 'img-ok') {
 				imgPathData[aProvidedPath].w = aImgInfoObj.w;
 				imgPathData[aProvidedPath].h = aImgInfoObj.h;
@@ -570,14 +570,14 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		var promiseAll_loadImgAndGetImgDatas = Promise.all(promiseAllArr_loadImgAndGetImgDatas);
 		promiseAll_loadImgAndGetImgDatas.then(
 			function(aVal) {
-				console.log('Fullfilled - promiseAll_loadImgAndGetImgDatas - ', aVal);
+
 				// start - do stuff here - promiseAll_loadImgAndGetImgDatas
 				step2();
 				// end - do stuff here - promiseAll_loadImgAndGetImgDatas
 			},
 			function(aReason) {
 				var rejObj = {name:'promiseAll_loadImgAndGetImgDatas', aReason:aReason};
-				console.warn('Rejected - promiseAll_loadImgAndGetImgDatas - ', rejObj);
+
 				self.postMessage(['destroyFrameworker', fwId]);
 				deferredMain_returnIconset.resolve([{
 					status: 'fail',
@@ -588,7 +588,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promiseAll_loadImgAndGetImgDatas', aCaught:aCaught};
-				console.log('Caught - promiseAll_loadImgAndGetImgDatas - ', rejObj);
+
 				self.postMessage(['destroyFrameworker', fwId]);
 				deferredMain_returnIconset.resolve([{
 					status: 'fail',
@@ -693,7 +693,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				if (badgeSizeNeeded < 1) {
 					badgeSizeNeeded = Math.round(aOutputSizesArr[i] * badgeSizeNeeded);
 				}
-				// console.log('badgeSizeNeeded:', badgeSizeNeeded, aOptions.aBadgeSizePerOutputSize[aOutputSizesArr[i]])
+
 				if (badgeSizeNeeded > 0) {
 					objOutputSizes[aOutputSizesArr[i]].badge = {};
 					objOutputSizes[aOutputSizesArr[i]].badge.useKey = whichNameToScaleFromToReachGoal(imgPathData_badge, badgeSizeNeeded, aOptions.aScalingAlgo);
@@ -733,7 +733,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 							break;
 						default:
 							// this will never happen
-							console.log('this will never happen because i ensured this in the validation section at start of this function');
+
 					}
 					
 					objOutputSizes[aOutputSizesArr[i]].badge.x = badgeX;
@@ -742,7 +742,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			}
 		}
 		
-		console.log('objOutputSizes:', objOutputSizes);
+
 		
 		step4();
 
@@ -766,13 +766,13 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			var promiseAll_drawScaledBadges = Promise.all(promiseAllArr_drawScaledBadges);
 			promiseAll_drawScaledBadges.then(
 				function(aVal) {
-					console.log('Fullfilled - promiseAll_drawScaledBadges - ', aVal);
+
 					// start - do stuff here - promiseAll_drawScaledBadges
 					setTimeout(function() {
 						makeDirAutofrom(aOptions.saveScaledBadgeDir, {checkExistsFirst:true});
 						// iterate through each objOutputSizes and write the badge arrbuf to file code here, as obviously i only ge there if aOptions.saveScaledBadgeDir was true
 						for (var p in objOutputSizes) {
-							// console.log('objOutputSizes[p].badge.arrbuf:', objOutputSizes[p].badge.arrbuf);
+
 							OS.File.writeAtomic(OS.Path.join(aOptions.saveScaledBadgeDir, aCreateName + '-' + 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png'), new Uint8Array(objOutputSizes[p].badge.arrbuf), {tmpPath:OS.Path.join(aOptions.saveScaledBadgeDir, aCreateName + '-' + 'badge_' + objOutputSizes[p].badge.drawAtSize + '.png.tmp')});
 						}
 					}, 0);
@@ -781,7 +781,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				},
 				function(aReason) {
 					var rejObj = {name:'promiseAll_drawScaledBadges', aReason:aReason};
-					console.error('Rejected - promiseAll_drawScaledBadges - ', rejObj);
+
 					self.postMessage(['destroyFrameworker', fwId]);
 					deferredMain_returnIconset.resolve([{
 						status: 'fail',
@@ -822,7 +822,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 			
 		// back to worker logic: after receive all arrbufs, then go to step6
 		
-		console.log('in step5');
+
 		var promiseAllArr_scaleOutput = [];
 		for (var p in objOutputSizes) {
 			// send message to frameworker to draw badge to canvas, and get back arr buf
@@ -846,14 +846,14 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		var promiseAll_scaleOutput = Promise.all(promiseAllArr_scaleOutput);
 		promiseAll_scaleOutput.then(
 			function(aVal) {
-				console.log('Fullfilled - promiseAll_scaleOutput - ', aVal);
+
 				// start - do stuff here - promiseAll_scaleOutput
 				step6();
 				// end - do stuff here - promiseAll_scaleOutput
 			},
 			function(aReason) {
 				var rejObj = {name:'promiseAll_scaleOutput', aReason:aReason};
-				console.warn('Rejected - promiseAll_scaleOutput - ', rejObj);
+
 				self.postMessage(['destroyFrameworker', fwId]);
 				deferredMain_returnIconset.resolve([{
 					status: 'fail',
@@ -864,7 +864,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		).catch(
 			function(aCaught) {
 				var rejObj = {name:'promiseAll_scaleOutput', aCaught:aCaught};
-				console.log('Caught - promiseAll_scaleOutput - ', rejObj);
+
 				self.postMessage(['destroyFrameworker', fwId]);
 				deferredMain_returnIconset.resolve([{
 					status: 'fail',
@@ -884,7 +884,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 		
 		// set to step7 which does the makeIconContainer per aCreateType
 		
-		console.error('step6, objOutputSizes:', objOutputSizes);
+
 		
 		if (aOptions.saveScaledBaseDir) {
 			setTimeout(function() {
@@ -978,7 +978,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 						// update icon cache
 						var rez_popen = ostypes.API('popen')('gtk-update-icon-cache -f -t "' + dirpathHicolor.replace(/ /g, '\ ') + '"', 'r')
 						var rez_pclose = ostypes.API('pclose')(rez_popen); // waits for process to exit
-						console.log('rez_pclose:', cutils.jscGetDeepest(rez_pclose)); 
+
 						
 						
 					} else {
@@ -1010,14 +1010,14 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 								objOutputSizes[p].getImageData = new Uint8ClampedArray(aObjOfBufs[p]);
 							}
 							
-							console.error('ok added in the getImageDatas to objOutputSizes:', objOutputSizes);
+
 							
 							step8_2();
 						});
 					};
 					
 					var step8_2 = function() {
-						console.error('in step2');
+
 						var icoDataArr = [];
 						for (var p in objOutputSizes) {
 							icoDataArr.push(objOutputSizes[p])
@@ -1026,9 +1026,9 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 							return a.base.drawAtSize > b.base.drawAtSize;
 						});
 						
-						console.error('icoDataArr:', icoDataArr);
 
-						console.time('ico-make');
+
+
 						var sizeof_ICONDIR = 6;
 						var sizeof_ICONDIRENTRY = 16;
 						var sizeof_BITMAPHEADER = 40;
@@ -1156,7 +1156,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 							
 							sumof__prior_sizeof_ICONIMAGE += icoDataArr[i].sizeof_ICONIMAGE; /*icoDataArr[i].XOR + icoDataArr[i].AND + sizeof_BITMAPHEADER;*/
 						}
-						console.timeEnd('ico-make');
+
 						// end - put imageDataArr to ico container, as buffer
 						
 						// write it to file
@@ -1176,7 +1176,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 
 						ostypes.API('SHChangeNotify')(ostypes.CONST.SHCNE_ASSOCCHANGED, ostypes.CONST.SHCNF_IDLIST, null, null); //updates all // :todo: figure out how to run this on specific
 						// ostypes.API('SHChangeNotify')(ostypes.CONST.SHCNE_UPDATEITEM, /*ostypes.CONST.SHCNF_PATHW*/5, ctypes.jschar.array()(writePath), null); //updates item
-						console.log('refreshed icon cache');
+
 						
 						deferredMain_returnIconset.resolve([{
 							status: 'ok',
@@ -1230,7 +1230,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					// run iconutil on .iconset dir
 					var rez_popen = ostypes.API('popen')('/usr/bin/iconutil -c icns "' + dirpathIconset.replace(/ /g, '\ ') + '"', 'r')
 					var rez_pclose = ostypes.API('pclose')(rez_popen); // waits for process to exit
-					console.log('rez_pclose:', cutils.jscGetDeepest(rez_pclose));
+
 					
 					// delete .iconset dir
 					OS.File.removeDir(dirpathIconset); // dont need , ignorePermissions:false as i have written to this directory, so its impossible for it to not have write permissions // also impossible to ignoreAbsent, as i created it there just a few lines above
@@ -1250,7 +1250,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 				break;
 			default:
 				// will never get here
-				console.error('will never get here');
+
 		}
 	};
 	
@@ -1261,7 +1261,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 
 
 function tellFrameWorkerDrawScaledCb(objOutputSizes, aP, aDeferred_scaledBadge, aImgScaledResult) {
-	console.info('in callback of tellFrameworkerDrawScaled in worker, the arguments are:', uneval(arguments));
+
 	if (aImgScaledResult.status == 'ok') {
 		objOutputSizes[aP].badge.arrbuf = aImgScaledResult.arrbuf;
 		aDeferred_scaledBadge.resolve();
@@ -1275,7 +1275,7 @@ function tellFrameWorkerDrawScaledCb(objOutputSizes, aP, aDeferred_scaledBadge, 
 }
 
 function tellFrameworker_dSoBoOOSbCb(objOutputSizes, aP, aDeferred_scaledBadge, aImgScaledResult) {
-	console.info('in callback of tellFrameworkerDrawScaled in worker, the arguments are:', uneval(arguments));
+
 	if (aImgScaledResult.status == 'ok') {
 		if (aImgScaledResult.optBuf) {
 			objOutputSizes[aP].base.arrbuf = aImgScaledResult.optBuf;
@@ -1302,7 +1302,7 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 		// 1 - blurry first then jagged - finds the immediate smaller in aSourcesNameSizeObj and will scale up, this will give the blurry look. if no smaller found, then it will find the immeidate larger then scale down, giving the jagged look.
 	
 	
-	console.log('aSourcesNameSizeObj;', aSourcesNameSizeObj);
+
 	var aSourcesNameSizeArr = []; // elemen is [keyName in aSourcesNameSizeObj, square size]
 	for (var p in aSourcesNameSizeObj) {
 		aSourcesNameSizeArr.push([
@@ -1328,7 +1328,7 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 	var nameOfLarger; // holds key that is found in aSourcesNameSizeObj that is the immediate larger then goal size
 	for (var i=0; i<aSourcesNameSizeArr.length; i++) {
 		if (aSourcesNameSizeArr[i][1] == aGoalSize) {
-			console.info('for goal size of', aGoalSize, 'returning exact match at name:', aSourcesNameSizeArr[i][0]);
+
 			return aSourcesNameSizeArr[i][0]; // return name
 		} else if (aSourcesNameSizeArr[i][1] < aGoalSize) {
 			nameOfSmaller = aSourcesNameSizeArr[i][0];
@@ -1343,11 +1343,11 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 				
 				// jagged
 				if (nameOfLarger) {
-					console.info('for goal size of', aGoalSize, 'returning jagged first because it was found. so match at name:', aSourcesNameSizeArr, 'nameOfLarger:', nameOfLarger);
+
 				} else {
-					console.info('for goal size of', aGoalSize, 'returning blurry second because it no larger was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
+
 				}
-				// console.log('nameOfLarger:', nameOfLarger, 'nameOfSmaller:', nameOfSmaller);
+
 				return nameOfLarger || nameOfSmaller; // returns immediate larger if found, else returns the immeidate smaller
 			
 			break;
@@ -1356,9 +1356,9 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 				
 				// blurry
 				if (nameOfSmaller) {
-					console.info('for goal size of', aGoalSize, 'returning blurry first because it was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
+
 				} else {
-					console.info('for goal size of', aGoalSize, 'returning jagged second because it no smaller was found. so match at name:', aSourcesNameSizeArr, 'nameOfLarger:', nameOfLarger);
+
 				}
 				return nameOfSmaller || nameOfLarger; // returns immediate smaller if found, else returns the immeidate larger
 			
@@ -1407,7 +1407,7 @@ function uninstallLinuxIconByName(aNameArr, onlyCheckTheseSizes, startsWith) {
 				hicolorIterator = new OS.File.DirectoryIterator(dirpathHicolor);
 				hicolorEntries = hicolorIterator.nextBatch();  // this will throw if path at str doesnt exist, this only happens on pathToDir though, as the rest is on stuff thats found link10000002551 i got this: `message:"Error: Win error 2 during operation DirectoryIterator.prototype.next on file C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\profilist_data\launcher_exes (The system cannot find the file specified.)`
 			} catch(iterex) {
-				console.error('error on hicolorIterator:', iterex);
+
 				// throw iterex;
 				return [{
 					status: 'fail',
@@ -1422,17 +1422,17 @@ function uninstallLinuxIconByName(aNameArr, onlyCheckTheseSizes, startsWith) {
 				}
 			}
 		}
-		console.log('will check in these folders:', dirpathSizeArr);
+
 		
 		for (var i=0; i<dirpathSizeArr.length; i++) {
 			if (!startsWith) {
 				for (var j=0; j<aNameArr.length; j++) {
 					try {
 						OS.File.remove(OS.Path.join(dirpathSizeArr[i], aNameArr[j] + '.png'), {ignoreAbsent:false});
-						console.log('deleted:', OS.Path.join(dirpathSizeArr[i], aNameArr[j] + '.png')); // .remove throws when file DNE, so it will not get to this line if file DNE // :note: I LIKE HOW OS.File.remove throws when file does not exist
+
 					} catch (filex) {
 						// i thin kthis will catch if file does not exist
-						console.warn('error when trying to delete', OS.Path.join(dirpathSizeArr, aNameArr[j] + '.png'), 'filex:', filex);
+
 					}
 				}
 			} else {
@@ -1443,7 +1443,7 @@ function uninstallLinuxIconByName(aNameArr, onlyCheckTheseSizes, startsWith) {
 					dirsizeIterator = new OS.File.DirectoryIterator(dirpathSizeArr[i]);
 					dirsizeEntries = dirsizeIterator.nextBatch();  // this will throw if path at str doesnt exist, this only happens on pathToDir though, as the rest is on stuff thats found link10000002551 i got this: `message:"Error: Win error 2 during operation DirectoryIterator.prototype.next on file C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\profilist_data\launcher_exes (The system cannot find the file specified.)`
 				} catch(iterex) {
-					console.error('error on dirsizeIterator:', iterex);
+
 					// throw iterex;
 					return [{
 						status: 'fail',
@@ -1457,7 +1457,7 @@ function uninstallLinuxIconByName(aNameArr, onlyCheckTheseSizes, startsWith) {
 						for (var k=0; k<aNameArr.length; k++) {
 							if (dirsizeEntries[j].name.toLowerCase().indexOf(aNameArr[k]) == 0) {
 								OS.File.remove(dirsizeEntries[j].path);
-								console.log('deleted:', dirsizeEntries[j].path);
+
 							}
 						}
 					}
@@ -1466,9 +1466,9 @@ function uninstallLinuxIconByName(aNameArr, onlyCheckTheseSizes, startsWith) {
 		}
 		
 	} else if (core.os.toolkit.indexOf('qt') == 0) {
-		console.error('qt not supported');
+
 	} else {
-		console.error('platform not supported');
+
 	}
 	
 	return [{status:'ok'}];
@@ -1498,7 +1498,7 @@ function listAllLocalIcons() {
 			hicolorIterator = new OS.File.DirectoryIterator(dirpathHicolor);
 			hicolorEntries = hicolorIterator.nextBatch();  // this will throw if path at str doesnt exist, this only happens on pathToDir though, as the rest is on stuff thats found link10000002551 i got this: `message:"Error: Win error 2 during operation DirectoryIterator.prototype.next on file C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\profilist_data\launcher_exes (The system cannot find the file specified.)`
 		} catch(iterex) {
-			console.error('error on hicolorIterator:', iterex);
+
 			// throw iterex;
 			return [{
 				status: 'fail',
@@ -1531,7 +1531,7 @@ function listAllLocalIcons() {
 				dirsizeIterator = new OS.File.DirectoryIterator(dirpathSizeArr[i]);
 				dirsizeEntries = dirsizeIterator.nextBatch();  // this will throw if path at str doesnt exist, this only happens on pathToDir though, as the rest is on stuff thats found link10000002551 i got this: `message:"Error: Win error 2 during operation DirectoryIterator.prototype.next on file C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\profilist_data\launcher_exes (The system cannot find the file specified.)`
 			} catch(iterex) {
-				console.error('error on dirsizeIterator:', iterex);
+
 				// throw iterex;
 				return [{
 					status: 'fail',
@@ -1606,7 +1606,7 @@ function Deferred() {
 		}.bind(this));
 		Object.freeze(this);
 	} catch (ex) {
-		console.log('Promise not available!', ex);
+
 		throw new Error('Promise not available!');
 	}
 }
@@ -1637,7 +1637,7 @@ function makeDirAutofrom(aOSPath, aOptions={}) {
 	if (aOptions.checkExistsFirst) {
 		var itExists = OS.File.exists(aOSPath);
 		if (itExists) {
-			console.log('already existing');
+
 			return true;
 		}
 	}
@@ -1649,12 +1649,12 @@ function makeDirAutofrom(aOSPath, aOptions={}) {
 		aExists = OS.File.exists(aOSPath_existingDir);
 	}
 	
-	console.log('making from:', aOSPath_existingDir);
+
 	var rez = OS.File.makeDir(aOSPath, {
 		from: aOSPath_existingDir
 	});
 	
-	console.log('rez:', rez);
+
 }
 
 function isLittleEndian() {

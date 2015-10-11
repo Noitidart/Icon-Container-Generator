@@ -1,7 +1,7 @@
 /*start - chrome stuff*/
 const {classes: Cc, interfaces: Ci, manager: Cm, results: Cr, utils: Cu, Constructor: CC} = Components;
 Cm.QueryInterface(Ci.nsIComponentRegistrar);
-Cu.import('resource://gre/modules/devtools/Console.jsm');
+
 Cu.import('resource://gre/modules/osfile.jsm');
 Cu.import('resource://gre/modules/Promise.jsm');
 Cu.import('resource://gre/modules/Services.jsm');
@@ -15,7 +15,7 @@ const core = {
 			name: 'icon-container-generator',
 			locale: 'chrome://icon-container-generator/locale/'
 		},
-		cache_key: Math.random() // set to version on release
+		cache_key: 'v1.0' // set to version on release
 	}
 };
 var gAngScope;
@@ -76,12 +76,12 @@ function handleDrop(baseOrBadge, e) {
 	e.stopPropagation(); // Stops some browsers from redirecting.
 	e.preventDefault();
 
-	console.error('baseOrBadge == ', baseOrBadge);
+
 	
 	var files = e.dataTransfer.files;
 	for (var i = 0, f; f = files[i]; i++) {
 		// Read the File objects in this FileList.
-		console.log(i, 'f:', f);
+
 		testLoadImage(f.mozFullPath, baseOrBadge);
 	}
 }
@@ -175,7 +175,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		function reflectOutputSizes_into_aBadgeSizePerOutputSize() {
 			for (var i=0; i<MODULE.aOutputSizesArr.length; i++) {
 				if (!(MODULE.aOutputSizesArr[i] in MODULE.aBadgeSizePerOutputSize)) {
-					console.log('seting:', MODULE.aOutputSizesArr[i]);
+
 					if (MODULE.aOutputSizesArr[i] == 16) {
 						MODULE.aBadgeSizePerOutputSize[MODULE.aOutputSizesArr[i]] = 10;
 					} else {
@@ -261,7 +261,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		
 		MODULE.previewInserted = function(aSize, aIndex) {
 			var can = document.getElementById('previews').querySelectorAll('canvas')[aIndex];
-			console.info('can:', can);
+
 			var ctx = can.getContext('2d');
 			can.width = aSize;
 			can.height = aSize;
@@ -313,9 +313,9 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 			
 			var iconProcessTimeStart = new Date().getTime();
 			sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['appFunc_generateFiles', [aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPathArr, aOutputSizesArr, aOptions]], bootstrapMsgListener.funcScope, function(aReturnObj) {
-				console.info('icon process time:', new Date().getTime() - iconProcessTimeStart, 'ms');
+
 				// bootstrap calls this after it runs the chromeworker returnIconset function
-				console.log('ok back in app.js after returnIconset complete, aReturnObj:', aReturnObj);
+
 				if (aReturnObj.status == 'fail') {
 					alert('Icon container process failed with message: "' + aReturnObj.reason + '"')
 				} else {
@@ -331,7 +331,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.listAllLocalIcons = function() {
 			sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['listAllLocalIcons'], bootstrapMsgListener.funcScope, function(aReturnObj) {
 				// bootstrap calls this after it runs the chromeworker returnIconset function
-				console.log('ok back in listAllLocalIcons, aReturnObj:', aReturnObj, 'MODULE.linuxIconsList:', MODULE.linuxIconsList);
+
 				if (aReturnObj.status == 'fail') {
 					alert('Icon fetch process failed with message: "' + aReturnObj.reason + '"')
 				} else {
@@ -349,7 +349,7 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 		MODULE.uninstallLinuxIcon = function(aIconName) {
 			sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['uninstallLinuxIcon', [aIconName]], bootstrapMsgListener.funcScope, function(aReturnObj) {
 				// bootstrap calls this after it runs the chromeworker returnIconset function
-				console.log('ok back in listAllLocalIcons, aReturnObj:', aReturnObj, 'MODULE.linuxIconsList:', MODULE.linuxIconsList);
+
 				if (aReturnObj.status == 'fail') {
 					alert('Icon uninstall failedfailed with message: "' + aReturnObj.reason + '"')
 				} else {
@@ -554,7 +554,7 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 	var nameOfLarger; // holds key that is found in aSourcesNameSizeObj that is the immediate larger then goal size
 	for (var i=0; i<aSourcesNameSizeArr.length; i++) {
 		if (aSourcesNameSizeArr[i][1] == aGoalSize) {
-			console.info('for goal size of', aGoalSize, 'returning exact match at name:', aSourcesNameSizeArr[i][0]);
+
 			return aSourcesNameSizeArr[i][0]; // return name
 		} else if (aSourcesNameSizeArr[i][1] < aGoalSize) {
 			nameOfSmaller = aSourcesNameSizeArr[i][0];
@@ -569,9 +569,9 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 				
 				// jagged
 				if (nameOfLarger) {
-					console.info('for goal size of', aGoalSize, 'returning jagged first because it was found. so match at name:', aSourcesNameSizeArr, 'nameOfLarger:', nameOfLarger);
+
 				} else {
-					console.info('for goal size of', aGoalSize, 'returning blurry second because it no larger was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
+
 				}
 				return nameOfLarger || nameOfSmaller; // returns immediate larger if found, else returns the immeidate smaller
 			
@@ -581,9 +581,9 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 				
 				// blurry
 				if (nameOfSmaller) {
-					console.info('for goal size of', aGoalSize, 'returning blurry first because it was found. so match at name:', aSourcesNameSizeArr, 'nameOfSmaller:', nameOfSmaller);
+
 				} else {
-					console.info('for goal size of', aGoalSize, 'returning jagged second because it no smaller was found. so match at name:', aSourcesNameSizeArr, 'nameOfLarger:', nameOfLarger);
+
 				}
 				return nameOfSmaller || nameOfLarger; // returns immediate smaller if found, else returns the immeidate larger
 			
@@ -621,7 +621,7 @@ var bootstrapMsgListener = {
 	funcScope: bootstrapCallbacks,
 	receiveMessage: function(aMsgEvent) {
 		var aMsgEventData = aMsgEvent.data;
-		console.log('framescript getting aMsgEvent:', aMsgEventData);
+
 		// aMsgEvent.data should be an array, with first item being the unfction name in this.funcScope
 		
 		var callbackPendingId;
@@ -630,7 +630,7 @@ var bootstrapMsgListener = {
 		}
 		
 		var funcName = aMsgEventData.shift();
-		console.error('this.funcScope:', this.funcScope);
+
 		if (funcName in this.funcScope) {
 			var rez_fs_call = this.funcScope[funcName].apply(null, aMsgEventData);
 			
@@ -643,12 +643,12 @@ var bootstrapMsgListener = {
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, aVal]);
 						},
 						function(aReason) {
-							console.error('aReject:', aReason);
+
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					).catch(
 						function(aCatch) {
-							console.error('aCatch:', aCatch);
+
 							contentMMFromContentWindow_Method2(content).sendAsyncMessage(core.addon.id, [callbackPendingId, ['promise_rejected', aReason]]);
 						}
 					);
@@ -658,7 +658,7 @@ var bootstrapMsgListener = {
 				}
 			}
 		}
-		else { console.warn('funcName', funcName, 'not in scope of this.funcScope') } // else is intentionally on same line with console. so on finde replace all console. lines on release it will take this out
+
 		
 	}
 };
