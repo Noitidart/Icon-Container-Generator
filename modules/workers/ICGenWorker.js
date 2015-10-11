@@ -942,21 +942,21 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					if (core.os.toolkit.indexOf('gtk') == 0) {
 						// populate aCreatePathDir, which is now an object, with key of icon size, and value of path to write it in
 						for (var p in objOutputSizes) {
-							var outputSize = objOutputSizes[p].base.size;
+							var outputSize = objOutputSizes[p].base.drawAtSize;
 							var sizeDirBasename = outputSize + 'x' + outputSize;
-							var writePath = OS.Path.join([
+							var writeDir = OS.Path.join(
 								OS.Constants.Path.homeDir,
 								'.local',
 								'share',
 								'icons',
 								'hicolor',
 								sizeDirBasename,
-								'apps',
-								aCreateName + '.png'
-							]);
+								'apps'
+							);
+							makeDirAutofrom(writeDir, {checkExistsFirst:true});
 							try {
-								OS.File.writeAtomic(writePath, new Uint8Array(objOutputSizes[p].arrbuf), {
-									tmpPath: writePath + '.png'
+								OS.File.writeAtomic(OS.Path.join(writeDir, aCreateName + '.png'), new Uint8Array(objOutputSizes[p].arrbuf), {
+									tmpPath: OS.Path.join(writeDir, aCreateName + '.png' + '.temp')
 								});
 							} catch (filex) {
 								deferredMain_returnIconset.resolve([{
@@ -1197,7 +1197,7 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 							try {
 								if (i == 0) {
 									OS.File.writeAtomic(writePath, new Uint8Array(objOutputSizes[p].arrbuf), {
-										tmpPath: writePath + '.png'
+										tmpPath: writePath + '.temp'
 									});
 								} else {
 									var zeroethPath = OS.Path.join(dirpathIconset, sizeToSubPngName[p][0] + '.png');

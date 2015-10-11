@@ -26,6 +26,7 @@
 		<br/>
 		Ouput Directory: <input type="button" value="{{BC.aCreatePathDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aCreatePathDir')"/>
 		<i>{{BC.aCreatePathDir}}</i>
+		<a href="#" ng-click="BC.aCreatePathDir=null" ng-show="BC.aCreatePathDir">Clear Directory</a>
 		<br/>
 		<label>
 			Output Sizes:
@@ -99,7 +100,10 @@
 		</span>
 		<br/>
 		<br/>
-		Source {{BC.aOptions_aBadge != '0' ? 'Base ' : ''}}Images:
+		<div>
+			Source {{BC.aOptions_aBadge != '0' ? 'Base ' : ''}}Images
+			<a href="#" ng-click="BC.aBaseSrcImgPathArr=[]; BC.imgPathSizesBase={}; BC.imgPathImagesBase={};" ng-show="BC.aBaseSrcImgPathArr.length">Clear Images</a>
+		</div>
 		<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_base">
 				<span ng-show="!BC.aBaseSrcImgPathArr || BC.aBaseSrcImgPathArr.length == 0">
 					Drop Images Here
@@ -110,7 +114,10 @@
 		</div>
 		<br/>
 		<span ng-show="BC.aOptions_aBadge != '0'">
-			Source Badge Images:
+			<div>
+				Source Badge Images
+				<a href="#" ng-click="BC.aBadgeSrcImgPathArr=[]; BC.imgPathSizesBadge={}; BC.imgPathImagesBadge={}" ng-show="BC.aBadgeSrcImgPathArr.length">Clear Images</a>
+			</div>
 			<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_badge">
 					<span ng-show="!BC.aBadgeSrcImgPathArr || BC.aBadgeSrcImgPathArr.length == 0">
 						Drop Images Here
@@ -121,7 +128,9 @@
 			</div>
 			<br/>
 		</span>
-		Output Images:
+		<div>
+			Output Images
+		</div>
 		<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">
 			<span ng-show="!BC.aOutputSizesArr || BC.aOutputSizesArr.length == 0">
 				preview of images that will be put into the container file
