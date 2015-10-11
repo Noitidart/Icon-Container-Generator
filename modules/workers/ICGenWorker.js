@@ -1369,6 +1369,182 @@ function whichNameToScaleFromToReachGoal(aSourcesNameSizeObj, aGoalSize, aScalin
 	}
 }
 
+function uninstallLinuxIconByName(aNameArr, onlyCheckTheseSizes, startsWith) {
+	// aNameArr is case INSENSITIVE IF startsWith is true ELSe it is case SENSITIVE
+		// array of icons with names to delete (dont include the .png or .svg)
+		// when sensitive lower case is used for .png .svg and folder names (mentioing folder names here even though thats for like some comment like on next 3 lines)
+	// onlyCheckTheseSizes is an array like [16, 'svg', '48'] - this tells it to only check and delete from these 3 folders 16x16, scalable (which is svg), 48x48
+		// setting this, is positive perf, so it doesnt iterate the hicolor folder to find all sizes
+	// startsWith is a bool, if set to true, anything starting with aName is deleted, but this causes it to iterate
+		// setting this is negative perf, as it will iterate in each #x#/apps/ to find all icon names
+		
+	if (core.os.toolkit.indexOf('gtk') == 0) {
+		
+		var dirpathHicolor = OS.Path.join(
+			OS.Constants.Path.homeDir,
+			'.local',
+			'share',
+			'icons',
+			'hicolor'
+		);
+		
+		var dirpathSizeArr = []; // push here the paths to checks
+		if (onlyCheckTheseSizes) {
+			for (var i=0; i<onlyCheckTheseSizes.length; i++) {
+				var cSize = onlyCheckTheseSizes[i];
+				var cSizeName;
+				if (cSize == 'svg') {
+					cSizeName = 'scalable';
+				} else {
+					cSizeName = cSize + 'x' + cSize;
+				}
+				dirpathSizeArr.push(OS.Path.join(dirpathHicolor, cSizeName, 'apps'));
+			}
+		} else {
+			var hicolorIterator;
+			var hicolorEntries;
+			try {
+				hicolorIterator = new OS.File.DirectoryIterator(dirpathHicolor);
+				hicolorEntries = hicolorIterator.nextBatch();  // this will throw if path at str doesnt exist, this only happens on pathToDir though, as the rest is on stuff thats found link10000002551 i got this: `message:"Error: Win error 2 during operation DirectoryIterator.prototype.next on file C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\profilist_data\launcher_exes (The system cannot find the file specified.)`
+			} catch(iterex) {
+				console.error('error on hicolorIterator:', iterex);
+				throw iterex;
+			} finally {
+				hicolorIterator.close();
+			}
+			for (var i=0; i<hicolorEntries.length; i++) {
+				if (hicolorEntries[i].isDir) {
+					dirpathSizeArr.push(OS.Path.join(hicolorEntries[i].path, 'apps'));
+				}
+			}
+		}
+		console.log('will check in these folders:', dirpathSizeArr);
+		
+		for (var i=0; i<dirpathSizeArr.length; i++) {
+			if (!startsWith) {
+				for (var j=0; j<aNameArr.length; j++) {
+					try {
+						OS.File.remove(OS.Path.join(dirpathSizeArr[i], aNameArr[j] + '.png'));
+						console.log('deleted:', OS.Path.join(dirpathSizeArr[i], aNameArr[j] + '.png')); // .remove throws when file DNE, so it will not get to this line if file DNE // :note: I LIKE HOW OS.File.remove throws when file does not exist
+					} catch (filex) {
+						// i thin kthis will catch if file does not exist
+						console.warn('error when trying to delete', OS.Path.join(dirpathSizeArr, aNameArr[j] + '.png'), 'filex:', filex);
+					}
+				}
+			} else {
+				// iterate dirpathSizeArr[i] then check for items that start with elements in aNameArr
+				var dirsizeIterator;
+				var dirsizeEntries;
+				try {
+					dirsizeIterator = new OS.File.DirectoryIterator(dirpathSizeArr[i]);
+					dirsizeEntries = dirsizeIterator.nextBatch();  // this will throw if path at str doesnt exist, this only happens on pathToDir though, as the rest is on stuff thats found link10000002551 i got this: `message:"Error: Win error 2 during operation DirectoryIterator.prototype.next on file C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\profilist_data\launcher_exes (The system cannot find the file specified.)`
+				} catch(iterex) {
+					console.error('error on dirsizeIterator:', iterex);
+					throw iterex;
+				} finally {
+					dirsizeIterator.close();
+				}
+				for (var j=0; i<dirsizeEntries.length; j++) {
+					for (var k=0; k<aNameArr.length; k++) {
+						if (dirsizeEntries[j].name.toLowerCase().indexOf(aNameArr[k]) == 0) {
+							OS.File.remove(dirsizeEntries[j].path);
+							console.log('deleted:', dirsizeEntries[j].path);
+						}
+					}
+				}
+			}
+		}
+		
+	} else if (core.os.toolkit.indexOf('qt') == 0) {
+		console.error('qt not supported');
+	} else {
+		console.error('platform not supported');
+	}
+	
+}
+
+function listAllLocalIcons() {
+	// this is specific for Icon Container Generator addon
+	
+	var rezObj = {}; // key is name, and value is array of dir names it was found in
+	
+	var dirpathHicolor = OS.Path.join(
+		OS.Constants.Path.homeDir,
+		'.local',
+		'share',
+		'icons',
+		'hicolor'
+	);
+
+	var dirpathSizeArr = [];
+	var dirnameSizeArr = [];
+	
+	var hicolorIterator;
+	var hicolorEntries;
+	try {
+		hicolorIterator = new OS.File.DirectoryIterator(dirpathHicolor);
+		hicolorEntries = hicolorIterator.nextBatch();  // this will throw if path at str doesnt exist, this only happens on pathToDir though, as the rest is on stuff thats found link10000002551 i got this: `message:"Error: Win error 2 during operation DirectoryIterator.prototype.next on file C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\profilist_data\launcher_exes (The system cannot find the file specified.)`
+	} catch(iterex) {
+		console.error('error on hicolorIterator:', iterex);
+		throw iterex;
+	} finally {
+		hicolorIterator.close();
+	}
+	for (var i=0; i<hicolorEntries.length; i++) {
+		if (hicolorEntries[i].isDir) {
+			dirpathSizeArr.push(OS.Path.join(hicolorEntries[i].path, 'apps'));
+			dirnameSizeArr.push(hicolorEntries[i].name); // dirnameSizeArr[i] == i of dirpathSizeArr // link112005145
+		}
+	}
+		
+	
+	for (var i=0; i<dirpathSizeArr.length; i++) {
+		var dirsizeIterator;
+		var dirsizeEntries;
+		
+		var cDirSizeNameFriendly = dirnameSizeArr[i];
+		var numMatch;
+		if (cDirSizeNameFriendly.toLowerCase() == 'scalable') {
+			cDirSizeNameFriendly = 'SVG';
+		} else if (numMatch = cDirSizeNameFriendly.exec(/\d+/)) {
+			cDirSizeNameFriendly = numMatch[0];
+		}
+		
+		try {
+			dirsizeIterator = new OS.File.DirectoryIterator(dirpathSizeArr[i]);
+			dirsizeEntries = dirsizeIterator.nextBatch();  // this will throw if path at str doesnt exist, this only happens on pathToDir though, as the rest is on stuff thats found link10000002551 i got this: `message:"Error: Win error 2 during operation DirectoryIterator.prototype.next on file C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\profilist_data\launcher_exes (The system cannot find the file specified.)`
+		} catch(iterex) {
+			console.error('error on dirsizeIterator:', iterex);
+			throw iterex;
+		} finally {
+			dirsizeIterator.close();
+		}
+		for (var j=0; i<dirsizeEntries.length; j++) {
+			var nameNoExt = dirsizeEntries[j].name.substr(0, dirsizeEntries[j].name.lastIndexOf('.'));
+			if (!(nameNoExt in rezObj)) {
+				rezObj[nameNoExt] = [];
+				
+					sizes: [], // friendly, like #x# is turned to # and scalable to svg
+					sizeDirName: [], // list of dir names
+					nameWithExt: []
+				};
+			}
+			
+			rezObj[nameNoExt].push({
+				sizeFriendly: cDirSizeNameFriendly
+				sizeDirName: dirnameSizeArr[i], // dirnameSizeArr[i] == i of dirpathSizeArr // link112005145
+				nameWithExt: dirsizeEntries[j].name // key with the extension of .png or .svg, i do this cuz i want to know if some .png/.svg are caps or mixed casing
+			});
+			
+			if (dirsizeEntries[j].name.toLowerCase().indexOf(aNameArr[k]) == 0) {
+				OS.File.remove(dirsizeEntries[j].path);
+				console.log('deleted:', dirsizeEntries[j].path);
+			}
+		}
+	}
+	
+	return rezObj;
+}
 // End - Addon Functionality
 
 
