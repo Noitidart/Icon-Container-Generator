@@ -121,10 +121,10 @@ function init(objCore) {
 			importScripts(core.addon.path.content + 'modules/ostypes_win.jsm');
 			break
 		case 'gtk':
-			importScripts(core.addon.path.content + 'modules/ostypes_x11.jsm');
+			importScripts(core.addon.path.content + 'modules/ostypes_libc.jsm');
 			break;
 		case 'darwin':
-			importScripts(core.addon.path.content + 'modules/ostypes_mac.jsm');
+			importScripts(core.addon.path.content + 'modules/ostypes_libc.jsm');
 			break;
 		default:
 			throw new Error({
@@ -941,15 +941,18 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					// aCreatePathDir = {}; // already made into an object in validation section above
 					if (core.os.toolkit.indexOf('gtk') == 0) {
 						// populate aCreatePathDir, which is now an object, with key of icon size, and value of path to write it in
+						var dirpathHicolor = OS.Path.join(
+							OS.Constants.Path.homeDir,
+							'.local',
+							'share',
+							'icons',
+							'hicolor'
+						);
 						for (var p in objOutputSizes) {
 							var outputSize = objOutputSizes[p].base.drawAtSize;
 							var sizeDirBasename = outputSize + 'x' + outputSize;
 							var writeDir = OS.Path.join(
-								OS.Constants.Path.homeDir,
-								'.local',
-								'share',
-								'icons',
-								'hicolor',
+								dirpathHicolor,
 								sizeDirBasename,
 								'apps'
 							);
@@ -966,12 +969,17 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 								}]);
 								return;
 							}
-							
 							deferredMain_returnIconset.resolve([{
 								status: 'ok',
 								reason: 'succesfully created installed icon to linux'
 							}]);
 						}
+							
+						// update icon cache
+						var rez_popen = ostypes.API('popen')('gtk-update-icon-cache -f -t "' + dirpathHicolor.replace(/ /g, '\ ') + '"', 'r')
+						var rez_pclose = ostypes.API('pclose')(rez_popen); // waits for process to exit
+						console.log('rez_pclose:', cutils.jscGetDeepest(rez_pclose)); 
+						
 						
 					} else {
 						// its QT
@@ -1154,8 +1162,9 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 						// write it to file
 						makeDirAutofrom(aCreatePathDir, {checkExistsFirst:true});
 						
+						var writePath = OS.Path.join(aCreatePathDir, aCreateName + '.ico');
 						try {
-							OS.File.writeAtomic(OS.Path.join(aCreatePathDir, aCreateName + '.ico'), new Uint8Array(buffer), {tmpPath:OS.Path.join(aCreatePathDir, aCreateName + '.ico.tmp')})
+							OS.File.writeAtomic(writePath, new Uint8Array(buffer), {tmpPath:writePath + '.tmp'})
 						} catch (filex) {
 							deferredMain_returnIconset.resolve([{
 								status: 'fail',
@@ -1165,6 +1174,10 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 							return;
 						}
 
+						ostypes.API('SHChangeNotify')(ostypes.CONST.SHCNE_ASSOCCHANGED, ostypes.CONST.SHCNF_IDLIST, null, null); //updates all // :todo: figure out how to run this on specific
+						// ostypes.API('SHChangeNotify')(ostypes.CONST.SHCNE_UPDATEITEM, /*ostypes.CONST.SHCNF_PATHW*/5, ctypes.jschar.array()(writePath), null); //updates item
+						console.log('refreshed icon cache');
+						
 						deferredMain_returnIconset.resolve([{
 							status: 'ok',
 							reason: 'succesfully created ico'
@@ -1215,23 +1228,24 @@ function returnIconset(aCreateType, aCreateName, aCreatePathDir, aBaseSrcImgPath
 					}
 					
 					// run iconutil on .iconset dir
-					self.postMessageWithCallback(['runIconutil', ['-c', 'icns', dirpathIconset]], function(aCode) {
-						
-						// delete .iconset dir
-						OS.File.removeDir(dirpathIconset); // dont need , ignorePermissions:false as i have written to this directory, so its impossible for it to not have write permissions // also impossible to ignoreAbsent, as i created it there just a few lines above
-						
-						if (aCode != 0) {
-							deferredMain_returnIconset.resolve([{
-								status: 'fail',
-								reason: 'failed to run iconutil'
-							}]);
-						} else {
-							deferredMain_returnIconset.resolve([{
-								status: 'ok',
-								reason: 'succesfully created icns'
-							}]);
-						}
-					});
+					var rez_popen = ostypes.API('popen')('/usr/bin/iconutil -c icns "' + dirpathIconset.replace(/ /g, '\ ') + '"', 'r')
+					var rez_pclose = ostypes.API('pclose')(rez_popen); // waits for process to exit
+					console.log('rez_pclose:', cutils.jscGetDeepest(rez_pclose));
+					
+					// delete .iconset dir
+					OS.File.removeDir(dirpathIconset); // dont need , ignorePermissions:false as i have written to this directory, so its impossible for it to not have write permissions // also impossible to ignoreAbsent, as i created it there just a few lines above
+
+					if (!cutils.jscEqual(rez_pclose, '0')) {
+						deferredMain_returnIconset.resolve([{
+							status: 'fail',
+							reason: 'failed to run iconutil, error code: ' + cutils.jscGetDeepest(rez_pclose)
+						}]);
+					} else {
+						deferredMain_returnIconset.resolve([{
+							status: 'ok',
+							reason: 'succesfully created icns'
+						}]);
+					}
 				
 				break;
 			default:
