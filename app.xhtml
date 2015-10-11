@@ -13,136 +13,155 @@
 	</head>
 	<body ng-controller="BodyController as BC">
 		<h1>Icon Container Generator</h1>
-		<h2>Parameters</h2>
-		<label>
-			Output Type:
-			<select ng-model="BC.aCreateType" ng-change="" ng-options="aOptName for aOptName in ['ICNS', 'ICO', 'Linux']"/>
-		</label>
-		<br/>
-		<label>
-			Ouput Name:
-			<input ng-model="BC.aCreateName" type="text"/>
-		</label>
-		<br/>
-		Ouput Directory: <input type="button" value="{{BC.aCreatePathDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aCreatePathDir')"/>
-		<i>{{BC.aCreatePathDir}}</i>
-		<a href="#" ng-click="BC.aCreatePathDir=null" ng-show="BC.aCreatePathDir">Clear Directory</a>
-		<br/>
-		<label>
-			Output Sizes:
-			<select ng-model="BC.aOutputSizesType" ng-change="BC.onChangeOutputSizes()" ng-options="aOptName for aOptName in ['Custom', 'Windows', 'Mac OS X', 'Linux']" />
-			<input type="text" ng-model="BC.aOutputSizesCustomStr" ng-change="BC.aOutputSizes_custStrToArr()" ng-show="BC.aOutputSizesType == 'Custom'" size="40" placeholder="Comma delimited sizes (Ex: 16,32,64)" />
-		</label>
-		<br/>
-		<label>
-			Scaling Algorithm:
-			<select ng-model="BC.aScalingAlgo" ng-options="key as aOptName for (key, aOptName) in {'0': 'Jagged First', '1': 'Blurry First'}" />
-		</label>
-		<br/>
-		<label>
-			Badge:
-			<select ng-model="BC.aOptions_aBadge" ng-options="key as aOptName for (key, aOptName) in {0:'NONE', 1:'Top Left', 2:'Top Right', 3:'Bottom Left', 4:'Bottom Right'}" ng-change="BC.ifBadgeNoneUncheck(); BC.ifNoneScaleSaved_UncheckDontMake();"/>
-		</label>
-		<br/>
-		<span ng-show="BC.aOptions_aBadge != '0'">
-			Badge Size/Scale per Icon Size: (enter value less than 1 for scale factor, ex: 0.5 or 0.333)
-			<table>
-				<tr>
-					<th>
-						icon size
-					</th>
-					<th>
-						badge size/factor
-					</th>
-					<th ng-show="BC.ifThereAreAnyFactors()">
-						factored size
-					</th>
-				</tr>
-				<tr ng-repeat="(aOutputSize, aBadgeSizeOrFactor) in BC.aBadgeSizePerOutputSize">
-					<td>
-						{{aOutputSize}}
-					</td>
-					<td>
-						<input type="text" size="3" ng-model="BC.aBadgeSizePerOutputSize[aOutputSize]" />
-					</td>
-					<td ng-show="BC.ifThereAreAnyFactors()">
-						{{BC.isAFactor(aBadgeSizeOrFactor) ? BC.calcFactoredRounded(aBadgeSizeOrFactor, aOutputSize) : '-'}}
-					</td>
-				</tr>
-			</table>
-			<label>
-				<input type="checkbox" ng-model="BC.ui_saveScaledBaseDir" ng-change="BC.aOptions_saveScaledBaseDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
-				Saved scaled base images
-			</label>
-			<input type="button" value="{{BC.aOptions_saveScaledBaseDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledBaseDir')" ng-show="BC.ui_saveScaledBaseDir"/>
-			<i>{{BC.aOptions_saveScaledBaseDir}}</i>
-			<br/>
-			<label>
-				<input type="checkbox" ng-model="BC.ui_saveScaledBadgeDir" ng-change="BC.aOptions_saveScaledBadgeDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
-				Saved scaled badge images
-			</label>
-			<input type="button" value="{{BC.aOptions_saveScaledBadgeDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledBadgeDir')" ng-show="BC.ui_saveScaledBadgeDir"/>
-			<i>{{BC.aOptions_saveScaledBadgeDir}}</i>
-			<br/>
-		</span>
-		<label>
-			<input type="checkbox" ng-model="BC.ui_saveScaledIconDir" ng-change="BC.aOptions_saveScaledIconDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
-			Saved scaled icon images
-		</label>
-		<input type="button" value="{{BC.aOptions_saveScaledIconDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledIconDir')" ng-show="BC.ui_saveScaledIconDir"/>
-		<i>{{BC.aOptions_saveScaledIconDir}}</i>
-		<br/>
-		<span ng-show="BC.ui_dontMakeIconContainer">
-			<label>
-				<input type="checkbox" ng-model="BC.aOptions_dontMakeIconContainer"/>
-				Don't output container (only useful if you are just want to save the scaled images)
-			</label>
-		</span>
-		<br/>
-		<br/>
 		<div>
-			Source {{BC.aOptions_aBadge != '0' ? 'Base ' : ''}}Images
-			<a href="#" ng-click="BC.aBaseSrcImgPathArr=[]; BC.imgPathSizesBase={}; BC.imgPathImagesBase={};" ng-show="BC.aBaseSrcImgPathArr.length">Clear Images</a>
-		</div>
-		<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_base">
-				<span ng-show="!BC.aBaseSrcImgPathArr || BC.aBaseSrcImgPathArr.length == 0">
-					Drop Images Here
-				</span>
-				<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizesBase[aSrc]}}" ng-repeat="aSrc in BC.aBaseSrcImgPathArr">
-					<img class="aSrcImg" src="{{aSrc}}" />
-				</span>
-		</div>
-		<br/>
-		<span ng-show="BC.aOptions_aBadge != '0'">
+			<h2>Parameters</h2>
+			<label>
+				Output Type:
+				<select ng-model="BC.aCreateType" ng-change="" ng-options="aOptName for aOptName in ['ICNS', 'ICO', 'Linux']"/>
+			</label>
+			<br/>
+			<label>
+				Ouput Name:
+				<input ng-model="BC.aCreateName" type="text"/>
+			</label>
+			<br/>
+			Ouput Directory: <input type="button" value="{{BC.aCreatePathDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aCreatePathDir')"/>
+			<i>{{BC.aCreatePathDir}}</i>
+			<a href="#" ng-click="BC.aCreatePathDir=null" ng-show="BC.aCreatePathDir">Clear Directory</a>
+			<br/>
+			<label>
+				Output Sizes:
+				<select ng-model="BC.aOutputSizesType" ng-change="BC.onChangeOutputSizes()" ng-options="aOptName for aOptName in ['Custom', 'Windows', 'Mac OS X', 'Linux']" />
+				<input type="text" ng-model="BC.aOutputSizesCustomStr" ng-change="BC.aOutputSizes_custStrToArr()" ng-show="BC.aOutputSizesType == 'Custom'" size="40" placeholder="Comma delimited sizes (Ex: 16,32,64)" />
+			</label>
+			<br/>
+			<label>
+				Scaling Algorithm:
+				<select ng-model="BC.aScalingAlgo" ng-options="key as aOptName for (key, aOptName) in {'0': 'Jagged First', '1': 'Blurry First'}" />
+			</label>
+			<br/>
+			<label>
+				Badge:
+				<select ng-model="BC.aOptions_aBadge" ng-options="key as aOptName for (key, aOptName) in {0:'NONE', 1:'Top Left', 2:'Top Right', 3:'Bottom Left', 4:'Bottom Right'}" ng-change="BC.ifBadgeNoneUncheck(); BC.ifNoneScaleSaved_UncheckDontMake();"/>
+			</label>
+			<br/>
+			<span ng-show="BC.aOptions_aBadge != '0'">
+				Badge Size/Scale per Icon Size: (enter value less than 1 for scale factor, ex: 0.5 or 0.333)
+				<table>
+					<tr>
+						<th>
+							icon size
+						</th>
+						<th>
+							badge size/factor
+						</th>
+						<th ng-show="BC.ifThereAreAnyFactors()">
+							factored size
+						</th>
+					</tr>
+					<tr ng-repeat="(aOutputSize, aBadgeSizeOrFactor) in BC.aBadgeSizePerOutputSize">
+						<td>
+							{{aOutputSize}}
+						</td>
+						<td>
+							<input type="text" size="3" ng-model="BC.aBadgeSizePerOutputSize[aOutputSize]" />
+						</td>
+						<td ng-show="BC.ifThereAreAnyFactors()">
+							{{BC.isAFactor(aBadgeSizeOrFactor) ? BC.calcFactoredRounded(aBadgeSizeOrFactor, aOutputSize) : '-'}}
+						</td>
+					</tr>
+				</table>
+				<label>
+					<input type="checkbox" ng-model="BC.ui_saveScaledBaseDir" ng-change="BC.aOptions_saveScaledBaseDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
+					Saved scaled base images
+				</label>
+				<input type="button" value="{{BC.aOptions_saveScaledBaseDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledBaseDir')" ng-show="BC.ui_saveScaledBaseDir"/>
+				<i>{{BC.aOptions_saveScaledBaseDir}}</i>
+				<br/>
+				<label>
+					<input type="checkbox" ng-model="BC.ui_saveScaledBadgeDir" ng-change="BC.aOptions_saveScaledBadgeDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
+					Saved scaled badge images
+				</label>
+				<input type="button" value="{{BC.aOptions_saveScaledBadgeDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledBadgeDir')" ng-show="BC.ui_saveScaledBadgeDir"/>
+				<i>{{BC.aOptions_saveScaledBadgeDir}}</i>
+				<br/>
+			</span>
+			<label>
+				<input type="checkbox" ng-model="BC.ui_saveScaledIconDir" ng-change="BC.aOptions_saveScaledIconDir=''; BC.ifNoneScaleSaved_UncheckDontMake();"/>
+				Saved scaled icon images
+			</label>
+			<input type="button" value="{{BC.aOptions_saveScaledIconDir ? 'Change' : 'Select' }} Directory" ng-click="BC.BrowseSelectDir('aOptions_saveScaledIconDir')" ng-show="BC.ui_saveScaledIconDir"/>
+			<i>{{BC.aOptions_saveScaledIconDir}}</i>
+			<br/>
+			<span ng-show="BC.ui_dontMakeIconContainer">
+				<label>
+					<input type="checkbox" ng-model="BC.aOptions_dontMakeIconContainer"/>
+					Don't output container (only useful if you are just want to save the scaled images)
+				</label>
+			</span>
+			<br/>
+			<br/>
 			<div>
-				Source Badge Images
-				<a href="#" ng-click="BC.aBadgeSrcImgPathArr=[]; BC.imgPathSizesBadge={}; BC.imgPathImagesBadge={}" ng-show="BC.aBadgeSrcImgPathArr.length">Clear Images</a>
+				Source {{BC.aOptions_aBadge != '0' ? 'Base ' : ''}}Images
+				<a href="#" ng-click="BC.aBaseSrcImgPathArr=[]; BC.imgPathSizesBase={}; BC.imgPathImagesBase={};" ng-show="BC.aBaseSrcImgPathArr.length">Clear Images</a>
 			</div>
-			<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_badge">
-					<span ng-show="!BC.aBadgeSrcImgPathArr || BC.aBadgeSrcImgPathArr.length == 0">
+			<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_base">
+					<span ng-show="!BC.aBaseSrcImgPathArr || BC.aBaseSrcImgPathArr.length == 0">
 						Drop Images Here
 					</span>
-					<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizesBadge[aSrc]}}" ng-repeat="aSrc in BC.aBadgeSrcImgPathArr">
-						<img src="{{aSrc}}" />
+					<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizesBase[aSrc]}}" ng-repeat="aSrc in BC.aBaseSrcImgPathArr">
+						<img class="aSrcImg" src="{{aSrc}}" />
 					</span>
 			</div>
 			<br/>
-		</span>
-		<div>
-			Output Images
-		</div>
-		<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">
-			<span ng-show="!BC.aOutputSizesArr || BC.aOutputSizesArr.length == 0">
-				preview of images that will be put into the container file
+			<span ng-show="BC.aOptions_aBadge != '0'">
+				<div>
+					Source Badge Images
+					<a href="#" ng-click="BC.aBadgeSrcImgPathArr=[]; BC.imgPathSizesBadge={}; BC.imgPathImagesBadge={}" ng-show="BC.aBadgeSrcImgPathArr.length">Clear Images</a>
+				</div>
+				<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;" id="dropTarget_badge">
+						<span ng-show="!BC.aBadgeSrcImgPathArr || BC.aBadgeSrcImgPathArr.length == 0">
+							Drop Images Here
+						</span>
+						<span class="aSrcImgSpan" data-img-size="{{BC.imgPathSizesBadge[aSrc]}}" ng-repeat="aSrc in BC.aBadgeSrcImgPathArr">
+							<img src="{{aSrc}}" />
+						</span>
+				</div>
+				<br/>
 			</span>
-			<span ng-show="BC.aOutputSizesArr" id="previews">
-				<span class="outputPreviewCanCont" ng-init="BC.previewInserted(aSize, $index)" ng-repeat="aSize in BC.aOutputSizesArr">
-					<canvas class="outputImg_blank"/>
+			<div>
+				Output Images
+			</div>
+			<div style="display:inline-block; border: 3px dashed #ccc; border-radius:10px; text-align:center; line-height:125px; white-space:nowrap;">
+				<span ng-show="!BC.aOutputSizesArr || BC.aOutputSizesArr.length == 0">
+					preview of images that will be put into the container file
 				</span>
-			</span>
+				<span ng-show="BC.aOutputSizesArr" id="previews">
+					<span class="outputPreviewCanCont" ng-init="BC.previewInserted(aSize, $index)" ng-repeat="aSize in BC.aOutputSizesArr">
+						<canvas class="outputImg_blank"/>
+					</span>
+				</span>
+			</div>
+			<br/>
+			<input type="button" value="Generate Previews" style="display:block;" onclick="generatePreviews()"/>
+			<input type="button" value="Make Icon Container" style="display:block;" ng-click="BC.generateFiles()"/>
 		</div>
-		<br/>
-		<input type="button" value="Generate Previews" style="display:block;" onclick="generatePreviews()"/>
-		<input type="button" value="Make Icon Container" style="display:block;" ng-click="BC.generateFiles()"/>
+		<div>
+			<h2>Linux Icon Manager/Uninstaller</h2>
+			<input type="button" value="List All Locally Installed Icons" ng-click="BC.listAllLocalIcons()"/>
+			<div ng-repeat="(aIconName, arrIconImages) in BC.linuxIconsList" class="linux-icon-row">
+				<span class="linux-icon-name">
+					{{aIconName}}
+				</span>
+				<span class="linux-icon-del">
+					<a href="#" ng-click="BC.uninstallLinuxIcon(aIconName)">Delete</a>
+				</span>
+				<span class="linux-icon-image" ng-repeat="aIconImage in arrIconImages | orderBy:'sizeFriendly'">
+					<img src="{{aIconImage.fileUri}}" />
+					<br/>
+					<span>{{aIconImage.sizeFriendly}}</span>
+				</span>
+			</div>
+		</div>
 	</body>
 </html>

@@ -285,6 +285,22 @@ var fsFuncs = { // functions for framescripts to call in main thread
 		console.info('fwInstancesId:', fwInstancesId);
 		
 		ICGenWorkerFuncs.fwInstances[fwInstancesId].deferredMain_setupFrameworker.resolve(['ok send me imgs now baby']);
+	},
+	listAllLocalIcons: function() {
+		var deferredMain_listAllLocalIcons = new Deferred();
+		ICGenWorker.postMessageWithCallback(['listAllLocalIcons'], function(aStatusObj) {
+			console.log('listAllLocalIcons completed, aStatusObj:', aStatusObj);
+			deferredMain_listAllLocalIcons.resolve([aStatusObj]);
+		});
+		return deferredMain_listAllLocalIcons.promise;
+	},
+	uninstallLinuxIcon: function(aIconNameArr) {
+		var deferredMain_uninstallLinuxIcon = new Deferred();
+		ICGenWorker.postMessageWithCallback(['uninstallLinuxIconByName', aIconNameArr], function(aStatusObj) {
+			console.log('uninstallLinuxIcon completed, aStatusObj:', aStatusObj);
+			deferredMain_uninstallLinuxIcon.resolve([aStatusObj]);
+		});
+		return deferredMain_uninstallLinuxIcon.promise;
 	}
 };
 

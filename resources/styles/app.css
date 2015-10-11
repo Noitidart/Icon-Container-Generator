@@ -86,3 +86,19 @@ select[multiple] {
 	font-weight: bold;
 }
 
+.linux-icon-row {
+	padding-bottom: 10px;
+	white-space: nowrap;
+}
+
+.linux-icon-row > span {
+	display: inline-block;
+	white-space: normal;
+	text-align: center;
+	margin: 0 10px;
+	position: relative;
+}
+
+.linux-icon-image > img {
+	max-width: 150px;
+}

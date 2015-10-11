@@ -325,8 +325,40 @@ var	ANG_APP = angular.module('iconcontainergenerator', [])
 						alert('Succesfully completed proccessing');
 					}
 				}
-			})
-		}
+			});
+		};
+		
+		MODULE.listAllLocalIcons = function() {
+			sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['listAllLocalIcons'], bootstrapMsgListener.funcScope, function(aReturnObj) {
+				// bootstrap calls this after it runs the chromeworker returnIconset function
+				console.log('ok back in listAllLocalIcons, aReturnObj:', aReturnObj, 'MODULE.linuxIconsList:', MODULE.linuxIconsList);
+				if (aReturnObj.status == 'fail') {
+					alert('Icon fetch process failed with message: "' + aReturnObj.reason + '"')
+				} else {
+					$scope.BC.linuxIconsList = aReturnObj.iconsList;
+					$scope.$digest();
+					if (aReturnObj.reason) {
+						alert('Succesfully fetched: "' + aReturnObj.reason + '"');
+					} else {
+						alert('Succesfully completed fetch');
+					}
+				}
+			});
+		};
+		
+		MODULE.uninstallLinuxIcon = function(aIconName) {
+			sendAsyncMessageWithCallback(contentMMFromContentWindow_Method2(window), core.addon.id, ['uninstallLinuxIcon', [aIconName]], bootstrapMsgListener.funcScope, function(aReturnObj) {
+				// bootstrap calls this after it runs the chromeworker returnIconset function
+				console.log('ok back in listAllLocalIcons, aReturnObj:', aReturnObj, 'MODULE.linuxIconsList:', MODULE.linuxIconsList);
+				if (aReturnObj.status == 'fail') {
+					alert('Icon uninstall failedfailed with message: "' + aReturnObj.reason + '"')
+				} else {
+					delete $scope.BC.linuxIconsList[aIconName]
+					$scope.$digest();
+					alert('Succesfully deleted: ' + aIconName);
+				}
+			});
+		};
 	}]);
 
 // end - angular
